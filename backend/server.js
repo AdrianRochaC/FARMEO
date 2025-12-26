@@ -9,8 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-// Cargar variables de entorno
-dotenv.config();
+// Cargar variables de entorno explícitamente desde la carpeta actual
+dotenv.config({ path: path.join(__dirname, '.env') });
 // Agregar importación de los endpoints de preferencias
 const {
   updateBackgroundImage,

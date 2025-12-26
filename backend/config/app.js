@@ -2,17 +2,17 @@
 const appConfig = {
   // Configuración del servidor
   server: {
-    port: process.env.PORT || 3001,
+    port: process.env.PORT || 3002,
     host: '0.0.0.0',
     environment: process.env.NODE_ENV || 'development'
   },
-  
+
   // Configuración JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'capacitaciones_jwt_secret_2024_ultra_secure_key',
+    secret: process.env.JWT_SECRET || 'fallback_secret_key',
     expiresIn: '24h'
   },
-  
+
   // Configuración de archivos
   uploads: {
     maxFileSize: 20 * 1024 * 1024, // 20MB
@@ -25,13 +25,13 @@ const appConfig = {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ]
   },
-  
+
   // Configuración de OpenAI
   openai: {
     apiKey: process.env.OPENAI_API_KEY || 'OPENAI_API_KEY',
-    model: 'gpt-4.1'
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
   },
-  
+
   // Configuración de CORS
   cors: {
     allowedOrigins: [
