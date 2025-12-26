@@ -11,13 +11,13 @@ dotenv.config();
 
 // Configuración de OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || OPENAI_API_KEY, // Cambiar por tu API key real
+  apiKey: process.env.OPENAI_API_KEY || 'OPENAI_API_KEY', // Cambiar por tu API key real
 });
 
 class AIService {
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
-      }
+    }
   }
 
   /**
@@ -34,30 +34,30 @@ class AIService {
       console.log('  - Tipo de contenido:', courseData.contentType);
       console.log('  - Longitud del contenido:', courseData.content?.length || 0, 'caracteres');
       console.log('  - Número de preguntas solicitadas:', numQuestions);
-      
+
       if (!process.env.OPENAI_API_KEY) {
         throw new Error('OPENAI_API_KEY no configurada');
       }
 
       const { title, description, content, contentType } = courseData;
-      
+
       // Verificar que tenemos contenido suficiente (más tolerante)
       if (!content || content.trim().length < 20) {
         console.warn('⚠️ Contenido muy limitado, generando preguntas básicas...');
         // Generar preguntas básicas basadas en título y descripción
         return this.generateBasicQuestions(title, description, numQuestions);
       }
-      
+
       if (content.trim().length < 100) {
         console.warn('⚠️ Contenido limitado, pero intentando generar preguntas...');
       }
-      
+
       // Crear prompt contextual para OpenAI
       const prompt = this.createPrompt(title, description, content, contentType, numQuestions);
-      
+
       // Usar GPT-4o-mini si está disponible (mejor que gpt-3.5-turbo y más barato que gpt-4)
       const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-      
+
       const completion = await openai.chat.completions.create({
         model: model,
         messages: [
@@ -77,7 +77,7 @@ class AIService {
       let response = completion.choices[0].message.content;
       console.log('📝 Respuesta de OpenAI recibida:', response.length, 'caracteres');
       console.log('📋 Primeros 300 chars de la respuesta:', response.substring(0, 300));
-      
+
       // Si la respuesta está en formato JSON object, convertir a array
       try {
         const jsonResponse = JSON.parse(response);
@@ -90,16 +90,16 @@ class AIService {
       } catch (e) {
         // Si no es JSON object, continuar con el parsing normal
       }
-      
+
       const questions = this.parseAIResponse(response);
       console.log('✅ Preguntas generadas exitosamente:', questions.length);
       console.log('📊 Resumen de preguntas:');
       questions.forEach((q, i) => {
         console.log(`  ${i + 1}. ${q.question.substring(0, 50)}...`);
       });
-      
+
       return questions;
-      
+
     } catch (error) {
       console.error('❌ Error generando preguntas:', error.message);
       throw error;
@@ -114,7 +114,7 @@ class AIService {
     console.log('📝 Título:', title);
     console.log('📄 Descripción:', description?.substring(0, 200) || 'Sin descripción');
     console.log('🔢 Número solicitado:', numQuestions);
-    
+
     const questions = [];
     const basicQuestions = [
       {
@@ -194,18 +194,18 @@ class AIService {
   createPrompt(title, description, content, contentType, numQuestions) {
     let contentContext = '';
     let specificInstructions = '';
-    
+
     if (contentType === 'youtube') {
       // Extraer información estructurada del contenido
       const transcriptMatch = content.match(/TRANSCRIPCIÓN DEL CONTENIDO REAL:\s*([\s\S]*?)(?:\n\n|$)/);
       const transcript = transcriptMatch ? transcriptMatch[1].trim() : '';
       const hasTranscript = transcript && transcript.length > 50 && !transcript.includes('No se pudo obtener');
-      
+
       if (hasTranscript) {
         // Procesar transcripción para extraer conceptos clave
         const concepts = this.extractKeyConcepts(transcript);
         const sections = this.divideIntoSections(transcript);
-        
+
         contentContext = `CONTENIDO COMPLETO DEL VIDEO DE YOUTUBE:
 ${content}
 
@@ -214,7 +214,7 @@ ANÁLISIS DEL CONTENIDO:
 - Conceptos clave identificados: ${concepts.length > 0 ? concepts.slice(0, 10).join(', ') : 'Analizar transcripción'}
 - Secciones principales: ${sections.length} secciones identificadas
 ${sections.length > 0 ? sections.map((s, i) => `  ${i + 1}. ${s.title}: ${s.summary.substring(0, 100)}...`).join('\n') : ''}`;
-        
+
         specificInstructions = `
 INSTRUCCIONES ESPECÍFICAS PARA VIDEO DE YOUTUBE CON TRANSCRIPCIÓN REAL:
 - CRÍTICO: Las preguntas DEBEN basarse EXCLUSIVAMENTE en el contenido real mencionado en la transcripción
@@ -239,7 +239,7 @@ INSTRUCCIONES ESPECÍFICAS PARA VIDEO DE YOUTUBE CON TRANSCRIPCIÓN REAL:
 ${content}
 
 NOTA: No se pudo obtener la transcripción completa del video.`;
-        
+
         specificInstructions = `
 INSTRUCCIONES ESPECÍFICAS PARA VIDEO DE YOUTUBE (SIN TRANSCRIPCIÓN):
 - Analiza el título, descripción y metadatos disponibles
@@ -253,7 +253,7 @@ INSTRUCCIONES ESPECÍFICAS PARA VIDEO DE YOUTUBE (SIN TRANSCRIPCIÓN):
       const transcript = transcriptMatch ? transcriptMatch[1].trim() : '';
       const concepts = transcript ? this.extractKeyConcepts(transcript) : [];
       const sections = transcript ? this.divideIntoSections(transcript) : [];
-      
+
       contentContext = `CONTENIDO REAL DEL ARCHIVO DE VIDEO (TRANSCRIPCIÓN COMPLETA):
 ${content}
 
@@ -261,7 +261,7 @@ ANÁLISIS DEL CONTENIDO:
 - Transcripción disponible: ${transcript ? 'SÍ' : 'NO'} (${transcript ? transcript.length : 0} caracteres)
 - Conceptos clave identificados: ${concepts.length > 0 ? concepts.slice(0, 10).join(', ') : 'Analizar transcripción'}
 - Secciones principales: ${sections.length} secciones`;
-      
+
       specificInstructions = `
 INSTRUCCIONES ESPECÍFICAS PARA ARCHIVO DE VIDEO CON TRANSCRIPCIÓN:
 - CRÍTICO: Las preguntas DEBEN basarse EXCLUSIVAMENTE en el contenido real de la transcripción
@@ -348,17 +348,17 @@ IMPORTANTE:
    */
   extractKeyConcepts(transcript) {
     if (!transcript || transcript.length < 50) return [];
-    
+
     // Dividir en oraciones
     const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    
+
     // Palabras clave comunes en contenido educativo
     const educationalKeywords = [
       'definición', 'concepto', 'ejemplo', 'proceso', 'método', 'técnica',
       'característica', 'función', 'importante', 'necesario', 'debe', 'debería',
       'paso', 'procedimiento', 'aplicación', 'uso', 'utilidad', 'beneficio'
     ];
-    
+
     // Extraer frases que contengan palabras clave
     const concepts = [];
     sentences.forEach(sentence => {
@@ -379,7 +379,7 @@ IMPORTANTE:
         }
       });
     });
-    
+
     // Eliminar duplicados y limitar
     return [...new Set(concepts)].slice(0, 20);
   }
@@ -389,16 +389,16 @@ IMPORTANTE:
    */
   divideIntoSections(transcript) {
     if (!transcript || transcript.length < 100) return [];
-    
+
     // Dividir por párrafos o cambios de tema
     const paragraphs = transcript.split(/\n\n+/).filter(p => p.trim().length > 50);
-    
+
     // Si hay pocos párrafos, dividir por oraciones largas
     if (paragraphs.length < 3) {
       const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 50);
       const chunkSize = Math.ceil(sentences.length / 5);
       const sections = [];
-      
+
       for (let i = 0; i < sentences.length; i += chunkSize) {
         const chunk = sentences.slice(i, i + chunkSize).join('. ');
         if (chunk.length > 100) {
@@ -409,17 +409,17 @@ IMPORTANTE:
           });
         }
       }
-      
+
       return sections;
     }
-    
+
     // Procesar párrafos como secciones
     return paragraphs.slice(0, 10).map((para, index) => {
       const firstSentence = para.split(/[.!?]/)[0].trim();
-      const title = firstSentence.length > 60 
-        ? firstSentence.substring(0, 60) + '...' 
+      const title = firstSentence.length > 60
+        ? firstSentence.substring(0, 60) + '...'
         : firstSentence || `Sección ${index + 1}`;
-      
+
       return {
         title: title,
         summary: para.substring(0, 200) + (para.length > 200 ? '...' : ''),
@@ -440,21 +440,21 @@ IMPORTANTE:
       }
 
       const questions = JSON.parse(jsonMatch[0]);
-      
+
       // Validar y limpiar las preguntas
       return questions.map(q => ({
         question: q.question?.trim() || '',
         options: (q.options || []).map(opt => opt?.trim() || ''),
         correctIndex: parseInt(q.correctIndex) || 0,
         explanation: q.explanation?.trim() || ''
-      })).filter(q => 
-        q.question && 
-        q.options.length === 4 && 
+      })).filter(q =>
+        q.question &&
+        q.options.length === 4 &&
         q.options.every(opt => opt) &&
-        q.correctIndex >= 0 && 
+        q.correctIndex >= 0 &&
         q.correctIndex <= 3
       );
-      
+
     } catch (error) {
       throw new Error('Respuesta de IA malformada');
     }
@@ -467,17 +467,17 @@ IMPORTANTE:
     try {
       console.log('🎬 === OBTENIENDO INFORMACIÓN DE YOUTUBE ===');
       console.log('📺 URL:', videoUrl);
-      
+
       // PRIMERO: Intentar obtener transcripción directa
       let transcriptText = '';
       let confidence = 0.3;
       let videoTitle = 'Video de YouTube';
       let videoDescription = '';
-      
+
       try {
         const videoId = this.extractVideoId(videoUrl);
         console.log('🆔 Video ID extraído:', videoId);
-        
+
         if (videoId) {
           console.log('🎤 Intentando obtener transcripción directa...');
           try {
@@ -485,7 +485,7 @@ IMPORTANTE:
               lang: 'es',
               country: 'ES'
             });
-            
+
             if (transcript && transcript.length > 0) {
               transcriptText = transcript.map(item => item.text).join(' ');
               confidence = 0.9;
@@ -507,7 +507,7 @@ IMPORTANTE:
       } catch (transcriptError) {
         console.log('❌ Error general obteniendo transcripción:', transcriptError.message);
       }
-      
+
       // SEGUNDO: Si no hay transcripción, intentar descargar audio y transcribir
       if (!transcriptText) {
         console.log('🔄 No se obtuvo transcripción directa, intentando descargar audio...');
@@ -524,7 +524,7 @@ IMPORTANTE:
           console.log('❌ Error descargando audio:', downloadError.message);
         }
       }
-      
+
       // TERCERO: Intentar obtener información básica con ytdl-core
       try {
         console.log('🔄 Intentando obtener información básica...');
@@ -544,10 +544,10 @@ IMPORTANTE:
           videoDescription = 'Información no disponible debido a restricciones de YouTube';
         }
       }
-      
+
       // Crear contenido enriquecido con mejor estructura
       const hasTranscript = transcriptText && transcriptText.length > 50 && !transcriptText.includes('No se pudo obtener');
-      
+
       let enrichedContent = `
 TÍTULO DEL VIDEO: ${videoTitle}
 DESCRIPCIÓN DEL VIDEO:
@@ -559,7 +559,7 @@ ${videoDescription || 'No disponible'}
         // Procesar transcripción para mejor análisis
         const concepts = this.extractKeyConcepts(transcriptText);
         const sections = this.divideIntoSections(transcriptText);
-        
+
         enrichedContent += `
 TRANSCRIPCIÓN COMPLETA DEL CONTENIDO REAL DEL VIDEO:
 ${transcriptText}
@@ -587,13 +587,13 @@ INSTRUCCIONES PARA LA IA:
 - Indica en las preguntas que se basan en el tema general, no en contenido específico del video
 `;
       }
-      
+
       console.log('📊 === RESUMEN DE INFORMACIÓN OBTENIDA ===');
       console.log('📏 Longitud total del contenido:', enrichedContent.length, 'caracteres');
       console.log('📝 Longitud de transcripción:', transcriptText.length, 'caracteres');
       console.log('🎯 Confianza:', confidence);
       console.log('📋 Contenido final (primeros 500 chars):', enrichedContent.substring(0, 500));
-      
+
       return {
         title: videoTitle,
         content: enrichedContent,
@@ -608,7 +608,7 @@ INSTRUCCIONES PARA LA IA:
           sentiment: []
         }
       };
-      
+
     } catch (error) {
       console.error('❌ Error en getYouTubeVideoInfo:', error.message);
       throw error;
@@ -632,7 +632,7 @@ INSTRUCCIONES PARA LA IA:
     try {
       // Usar el procesador de video para obtener transcripción real
       const videoData = await videoProcessor.processYouTubeVideo(videoUrl);
-      
+
       // Crear contenido enriquecido con la transcripción real
       const enrichedContent = `
 TÍTULO DEL VIDEO: ${videoData.title}
@@ -655,8 +655,8 @@ ${videoData.entities ? videoData.entities.map(e => `- ${e.text} (${e.entity_type
 INSTRUCCIONES PARA LA IA:
 Basándote en la transcripción real del video de YouTube, genera preguntas de evaluación que evalúen la comprensión del contenido específico mencionado en el audio. Las preguntas deben ser relevantes para el material educativo real que se presenta en el video.
       `;
-      
-      
+
+
       return {
         title: videoData.title,
         content: enrichedContent,
@@ -673,7 +673,7 @@ Basándote en la transcripción real del video de YouTube, genera preguntas de e
           sentiment: videoData.sentiment
         }
       };
-      
+
     } catch (error) {
       throw error;
     }
@@ -686,7 +686,7 @@ Basándote en la transcripción real del video de YouTube, genera preguntas de e
     try {
       // Usar el procesador de video para obtener transcripción real
       const videoData = await videoProcessor.processMP4Video(filePath);
-      
+
       // Crear contenido enriquecido con la transcripción real
       const enrichedContent = `
 NOMBRE DEL ARCHIVO: ${videoData.fileName}
@@ -705,7 +705,7 @@ ${videoData.entities ? videoData.entities.map(e => `- ${e.text} (${e.entity_type
 INSTRUCCIONES PARA LA IA:
 Basándote en la transcripción real del archivo de video, genera preguntas de evaluación que evalúen la comprensión del contenido específico mencionado en el audio. Las preguntas deben ser relevantes para el material educativo real que se presenta en el video.
       `;
-      
+
       return {
         title: videoData.fileName,
         content: enrichedContent,
@@ -720,7 +720,7 @@ Basándote en la transcripción real del archivo de video, genera preguntas de e
           sentiment: videoData.sentiment
         }
       };
-      
+
     } catch (error) {
       throw error;
     }
@@ -733,10 +733,10 @@ Basándote en la transcripción real del archivo de video, genera preguntas de e
     try {
       const fileName = path.basename(filePath);
       const fileExtension = path.extname(filePath).toLowerCase();
-      
+
       let content = `Archivo: ${fileName}`;
       let contentType = 'file';
-      
+
       // Análisis específico para diferentes tipos de archivo
       if (fileExtension === '.pdf') {
         content += '\nTipo: Documento PDF';
@@ -747,32 +747,32 @@ Basándote en la transcripción real del archivo de video, genera preguntas de e
       } else if (['.mp4', '.avi', '.mov', '.wmv', '.mkv'].includes(fileExtension)) {
         content += '\nTipo: Archivo de video';
         contentType = 'video';
-        
+
         // Obtener información básica del archivo
         try {
           const stats = fs.statSync(filePath);
           const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
           const modifiedDate = stats.mtime.toLocaleDateString();
-          
+
           content += `\nTamaño: ${fileSizeMB} MB`;
           content += `\nFecha de modificación: ${modifiedDate}`;
           content += `\nExtensión: ${fileExtension.toUpperCase()}`;
         } catch (statsError) {
-          }
-        
+        }
+
         content += '\n\nINSTRUCCIONES PARA LA IA: Basándote en el nombre del archivo de video y sus metadatos, genera preguntas de evaluación que cubran los temas principales que se podrían tratar en un video educativo de este tipo. Considera que es contenido audiovisual educativo.';
       } else {
         content += '\nTipo: Archivo desconocido';
         content += '\n\nINSTRUCCIONES PARA LA IA: Basándote en el nombre del archivo, genera preguntas de evaluación generales que podrían ser relevantes para el contenido educativo.';
       }
-      
+
       return {
         title: fileName,
         content: content,
         contentType: contentType,
         fileExtension: fileExtension
       };
-      
+
     } catch (error) {
       throw error;
     }
@@ -812,12 +812,12 @@ Basándote en la transcripción real del archivo de video, genera preguntas de e
 
       // Generar preguntas con IA
       const questions = await this.generateQuestions(courseData);
-      
+
       // Guardar las preguntas en la base de datos
       await this.saveQuestionsToDatabase(courseId, questions);
-      
+
       return questions;
-      
+
     } catch (error) {
       throw error;
     }
@@ -830,7 +830,7 @@ Basándote en la transcripción real del archivo de video, genera preguntas de e
     try {
       // Eliminar preguntas existentes
       await executeQuery('DELETE FROM questions WHERE course_id = ?', [courseId]);
-      
+
       // Insertar nuevas preguntas
       for (const question of questions) {
         await executeQuery(
@@ -847,8 +847,8 @@ Basándote en la transcripción real del archivo de video, genera preguntas de e
           ]
         );
       }
-      
-      } catch (error) {
+
+    } catch (error) {
       throw error;
     }
   }

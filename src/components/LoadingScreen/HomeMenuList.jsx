@@ -158,7 +158,7 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
           flexShrink: 0
         }}>
           <img 
-            src="/daviivr.png" 
+            src="/farmeo.png" 
             alt="Logo Empresa" 
             style={{
               maxWidth: isSmallScreen ? '110px' : '130px',

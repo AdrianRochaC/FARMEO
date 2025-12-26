@@ -4,7 +4,7 @@ const getBackendURL = () => {
 
   // Si estamos en desarrollo (localhost)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return "http://localhost:3001";
+    return "http://localhost:3002";
   }
 
   // Si estamos en farmeoa.com (PRODUCCIÓN PRINCIPAL - DONGEE)
@@ -39,7 +39,7 @@ const getBackendURL = () => {
     return `${protocol}//api.${hostname.replace('www.', '')}`;
   }
 
-  return `${protocol}//${hostname}:3001`;
+  return `${protocol}//${hostname}:3002`;
 };
 
 export const BACKEND_URL = getBackendURL();
