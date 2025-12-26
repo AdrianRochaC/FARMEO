@@ -1,0 +1,237 @@
+.notifications-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 600px;
+  margin: 30px auto;
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.notifications-title {
+  margin-bottom: 18px;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-card {
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.notification-card.unread {
+  background: var(--gradient-primary);
+  border: 2px solid var(--border-focus);
+  border-left: 4px solid var(--border-focus);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.notification-card.unread > * {
+  position: relative;
+  z-index: 1;
+}
+
+.notification-card.read {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  opacity: 0.8;
+}
+
+.notification-content {
+  margin-bottom: 12px;
+}
+
+.notification-message {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+/* Texto con mejor contraste para notificaciones sin leer */
+/* Por defecto, texto blanco para contrastar con el gradiente del tema */
+.notification-card.unread .notification-message {
+  color: #ffffff !important;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.notification-card.unread .notification-date {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Asegurar contraste en temas pastel - usar texto oscuro */
+[data-color-scheme="pastel"] .notification-card.unread .notification-message,
+[data-color-scheme="pastel"] .notification-card.unread .notification-date {
+  color: #1a1a1a !important;
+  text-shadow: none !important;
+}
+
+/* Tema neon - texto negro con efecto neon */
+[data-color-scheme="neon"] .notification-card.unread .notification-message,
+[data-color-scheme="neon"] .notification-card.unread .notification-date {
+  color: #000000 !important;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.8), 0 0 12px rgba(0, 255, 136, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  font-weight: 700 !important;
+}
+
+/* Tema vibrant - texto oscuro */
+[data-color-scheme="vibrant"] .notification-card.unread .notification-message,
+[data-color-scheme="vibrant"] .notification-card.unread .notification-date {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Tema monochrome - texto oscuro */
+[data-color-scheme="monochrome"] .notification-card.unread .notification-message,
+[data-color-scheme="monochrome"] .notification-card.unread .notification-date {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Tema earth - texto claro */
+[data-color-scheme="earth"] .notification-card.unread .notification-message,
+[data-color-scheme="earth"] .notification-card.unread .notification-date {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.notification-card.read .notification-message {
+  color: var(--text-primary);
+}
+
+.notification-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+
+.notification-card.read .notification-date {
+  color: var(--text-secondary);
+}
+
+.mark-read-btn {
+  background: var(--gradient-primary);
+  color: var(--text-white);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-light);
+}
+
+.mark-read-btn:hover {
+  background: var(--gradient-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+/* Asegurar contraste del texto del botón en todos los temas */
+.mark-read-btn {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.notif-bell {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.7rem;
+  position: relative;
+  color: var(--text-white);
+}
+
+.notif-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--text-danger);
+  color: var(--text-white);
+  border-radius: 50%;
+  padding: 2px 7px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.notif-dropdown {
+  position: fixed !important;
+  right: 40px !important;
+  top: 80px !important;
+  width: 340px !important;
+  background: var(--bg-card) !important;
+  border: 2px solid var(--border-primary) !important;
+  border-radius: var(--radius-large) !important;
+  box-shadow: var(--shadow-heavy) !important;
+  z-index: 999999 !important;
+  padding: 1.5rem 1.5rem 1.5rem 1.5rem !important;
+  outline: none !important;
+  color: var(--text-primary) !important;
+  font-size: 1.2rem !important;
+}
+
+.notif-dropdown h4 {
+  margin: 0.2rem 0 0.7rem 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.notif-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.notif-dropdown ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.notif-dropdown li {
+  padding: 0.5rem 0.2rem;
+  border-bottom: 1px solid var(--border-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notif-dropdown li:last-child {
+  border-bottom: none;
+}
+
+.notif-unread {
+  background: var(--bg-card-hover);
+  font-weight: bold;
+}
+
+.notif-message {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.notif-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

@@ -1,0 +1,20 @@
+# Configuración para backend en Dongee
+# Este archivo es necesario si el backend se ejecuta a través de Apache
+# Si Dongee usa Node.js directamente, este archivo no es necesario
+
+# Redirigir todas las peticiones al servidor Node.js
+# Nota: Esto requiere mod_proxy y mod_proxy_http habilitados
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Redirigir /api/* al servidor Node.js en puerto 3001
+  RewriteCond %{REQUEST_URI} ^/api
+  RewriteRule ^(.*)$ http://localhost:3001/$1 [P,L]
+</IfModule>
+
+# Si Dongee soporta Node.js directamente, no necesitas este archivo
+# En su lugar, configura Node.js para que escuche en el puerto asignado
+
+
