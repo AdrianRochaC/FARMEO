@@ -3,19 +3,20 @@
 .admin-body.bitacora-calendar-page {
   padding: 20px;
   min-height: calc(100vh - 80px);
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  color: white;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .bitacora-calendar-container {
-  background: rgba(30, 41, 59, 0.7);
+  background: var(--bg-card) !important;
   backdrop-filter: blur(12px);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-primary);
   padding: 25px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-medium);
   max-width: 1400px;
   margin: 0 auto;
+  color: var(--text-primary);
 }
 
 /* Header & Actions */
@@ -38,15 +39,16 @@
 
 .view-selector {
   display: flex;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--bg-secondary);
   padding: 5px;
   border-radius: 12px;
+  border: 1px solid var(--border-primary);
 }
 
 .view-selector button {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-secondary);
   padding: 8px 15px;
   border-radius: 8px;
   cursor: pointer;
@@ -58,7 +60,7 @@
 }
 
 .view-selector button.active {
-  background: #3b82f6;
+  background: var(--gradient-primary);
   color: white;
 }
 
@@ -75,10 +77,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 15px;
-  background: rgba(15, 23, 42, 0.3);
-  border-radius: 12px;
+  gap: 30px;
+  padding: 20px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-small);
+  margin-bottom: 20px;
+}
+
+.nav-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-small);
+}
+
+.nav-btn:hover {
+  background: var(--gradient-primary);
+  color: white;
+  transform: scale(1.1);
+  border-color: transparent;
+  box-shadow: var(--shadow-medium);
+}
+
+.current-view-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  min-width: 300px;
+  text-align: center;
+  margin: 0;
 }
 
 /* Reusing grid styles from Bitacora.css where applicable */
@@ -90,11 +129,60 @@
 
 .calendar-day {
   min-height: 120px;
-  background: rgba(15, 23, 42, 0.4);
-  border-radius: 10px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  /* Más cuadrada */
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-primary);
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-day:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-info);
+}
+
+/* Base style for all task items in all views */
+.calendar-event,
+.calendar-event-card,
+.day-task-detail {
+  border-radius: 4px !important;
+  /* Más cuadrada como pidió el usuario */
+  border: 1px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Month view specifics */
+.calendar-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.calendar-event .event-dot {
+  display: none;
+  /* Quitamos el punto porque ahora el fondo indica el estado */
+}
+
+/* Week view specifics */
+.calendar-event-card {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-left: 6px solid transparent;
+}
+
+.calendar-event-card h5 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: inherit;
 }
 
 /* Mini Actions in Month/Week View */
@@ -122,32 +210,35 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.5);
+  /* Menos oscuro para que se vea el fondo */
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
 }
 
 .modal-content {
-  background: #1e293b;
-  padding: 30px;
+  background: var(--bg-card);
+  padding: 0;
+  /* Quitamos padding del contenedor para que lo maneje el layout outlook */
   border-radius: 20px;
   width: 95%;
-  max-width: 600px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  max-width: 950px;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-heavy);
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  /* El scroll lo tendrá el cuerpo interno */
 }
 
 .modal-content h2 {
   margin-top: 0;
   margin-bottom: 25px;
   font-size: 1.6rem;
-  color: #60a5fa;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-info);
+  border-bottom: 1px solid var(--border-primary);
   padding-bottom: 15px;
 }
 
@@ -158,9 +249,11 @@
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  color: #94a3b8;
-  font-weight: 600;
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .form-group input,
@@ -168,33 +261,33 @@
 .form-group select {
   width: 100%;
   padding: 12px 15px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
   border-radius: 10px;
-  color: white;
+  color: var(--text-primary);
   font-size: 1rem;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
 }
 
 .form-group input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+  filter: var(--calendar-filter, none);
   cursor: pointer;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
-  border-color: #3b82f6;
+  border-color: var(--border-focus);
   outline: none;
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-card-hover);
 }
 
 /* New User Selection Panel */
 .user-selection-panel {
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--bg-input);
   border-radius: 12px;
   padding: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-primary);
   max-height: 250px;
   overflow-y: auto;
 }
@@ -210,8 +303,8 @@
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-primary);
   border-radius: 100px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -220,21 +313,21 @@
 }
 
 .user-chip-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--bg-card-hover);
+  border-color: var(--border-primary-hover);
   transform: translateY(-2px);
 }
 
 .user-chip-item.active {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: #3b82f6;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+  background: var(--bg-info-light);
+  border-color: var(--text-info);
+  box-shadow: 0 0 15px var(--shadow-info);
 }
 
 .user-avatar-mini {
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: var(--gradient-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -246,7 +339,7 @@
 }
 
 .user-chip-item.active .user-avatar-mini {
-  background: #3b82f6;
+  background: var(--text-info);
 }
 
 .user-info-mini {
@@ -261,19 +354,19 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  color: #e2e8f0;
+  color: var(--text-primary);
 }
 
 .user-role-mini-label {
   font-size: 0.65rem;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .user-check-icon {
   position: absolute;
   right: 12px;
-  color: #3b82f6;
+  color: var(--text-info);
   font-weight: 700;
   font-size: 0.9rem;
 }
@@ -284,14 +377,14 @@
   align-items: center;
   gap: 15px;
   padding: 30px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .spinner-mini {
   width: 24px;
   height: 24px;
-  border: 2px solid rgba(59, 130, 246, 0.2);
-  border-top-color: #3b82f6;
+  border: 2px solid var(--border-info-light);
+  border-top-color: var(--text-info);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -307,7 +400,7 @@
   gap: 15px;
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-primary);
 }
 
 .btn-primary,
@@ -327,19 +420,13 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--gradient-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4);
-}
-
-.btn-secondary {
-  background: rgba(71, 85, 105, 0.4);
-  color: #e2e8f0;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -355,13 +442,102 @@
 }
 
 .week-day-col {
-  background: rgba(15, 23, 42, 0.3);
-  border-radius: 12px;
-  min-height: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  min-height: 500px;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.week-day-col:hover {
+  transform: translateY(-5px);
+  border-color: var(--text-info);
+  box-shadow: var(--shadow-medium);
+}
+
+.week-day-col.today {
+  border: 2px solid var(--text-info);
+  background: var(--bg-info-light);
+}
+
+.week-day-header {
+  padding: 15px 10px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.week-day-col.today .week-day-header {
+  background: var(--text-info) !important;
+}
+
+.week-day-col.today .day-name,
+.week-day-col.today .day-num {
+  color: white;
+}
+
+.day-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.day-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
 }
 
 .calendar-day-view {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: var(--shadow-medium);
+}
+
+.day-task-detail {
   padding: 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-task-detail:hover {
+  transform: translateX(5px);
+  box-shadow: var(--shadow-medium);
+}
+
+
+
+.task-main-info h4 {
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.task-html-desc {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.day-view-header h3 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 25px;
+  border-bottom: 2px solid var(--border-primary);
+  padding-bottom: 15px;
 }
 
 .task-actions-large {
@@ -388,17 +564,567 @@
 }
 
 /* Status Colors (Same as Bitacora.css) */
-.status-rojo {
-  border-left: 4px solid #ef4444;
-  background: rgba(239, 68, 68, 0.05);
+/* Estilos Estilo Outlook para el Modal - Ajustado a Dark Theme Premium */
+.outlook-modal .outlook-content {
+  max-width: 950px;
+  width: 95%;
+  max-height: 90vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  color: var(--text-primary);
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-heavy);
+  border-radius: 20px;
 }
 
-.status-amarillo {
-  border-left: 4px solid #f59e0b;
-  background: rgba(245, 158, 11, 0.05);
+.outlook-body {
+  display: flex;
+  flex: 1;
+  overflow-y: auto;
+  /* Añade scroll si el contenido es mucho */
 }
 
-.status-verde {
-  border-left: 4px solid #10b981;
-  background: rgba(16, 185, 129, 0.05);
+.outlook-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.outlook-toolbar button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-outlook-save {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.btn-outlook-save:hover {
+  transform: translateY(-2px);
+  background: var(--gradient-primary-hover);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn-outlook-cancel {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.btn-outlook-cancel:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.outlook-toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-primary);
+  margin: 0 8px;
+}
+
+.outlook-status-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.outlook-status-selector select {
+  padding: 6px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.outlook-body {
+  display: flex;
+  flex: 1;
+  min-height: 550px;
+}
+
+.outlook-main-form {
+  flex: 2;
+  padding: 20px 30px 80px 30px;
+  /* Más padding abajo para un scroll más largo */
+  border-right: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.outlook-side-preview {
+  flex: 1;
+  background: var(--bg-secondary);
+  opacity: 0.9;
+  padding: 25px 25px 80px 25px;
+  /* Más padding abajo */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-left: 1px solid var(--border-primary);
+}
+
+/* Título */
+.outlook-title-input {
+  width: 100%;
+  font-size: 1.8rem !important;
+  font-weight: 600;
+  border: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  outline: none;
+}
+
+.outlook-title-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* Filas de formulario */
+.outlook-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.row-icon {
+  font-size: 1.3rem;
+  color: var(--text-info);
+  padding-top: 4px;
+}
+
+.row-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row-content label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.row-content.horizontal {
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Selección de usuarios */
+.outlook-users-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 45px;
+  padding: 5px 0;
+}
+
+.outlook-user-chip {
+  padding: 6px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 100px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.outlook-user-chip:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-info);
+  transform: translateY(-1px);
+}
+
+.outlook-user-chip.selected {
+  background: var(--bg-progress-eval);
+  border-color: var(--text-info);
+  color: var(--text-info);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+}
+
+/* Fecha e inputs de texto */
+.outlook-date-input {
+  border: 1px solid var(--border-primary) !important;
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  width: auto !important;
+  outline: none;
+}
+
+.outlook-date-input:focus {
+  border-color: var(--border-focus) !important;
+}
+
+.outlook-date-input::-webkit-calendar-picker-indicator {
+  filter: var(--calendar-filter, invert(1)) !important;
+}
+
+.all-day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.all-day-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--text-info);
+}
+
+/* Descripción con Editor Enriquecido */
+.outlook-description {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 0 !important;
+}
+
+.description-toolbar {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-bottom: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.description-toolbar button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.description-toolbar button:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border-primary);
+  margin: 0 5px;
+  align-self: center;
+}
+
+.outlook-editor {
+  width: 100%;
+  height: auto;
+  min-height: 280px;
+  /* Un poco mas alto */
+  margin-bottom: 40px;
+  /* Espacio extra al final respecto al borde */
+  border: 1px solid var(--border-primary) !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+  padding: 20px !important;
+  font-size: 1rem !important;
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  outline: none;
+  overflow-y: visible;
+  /* Dejar que el scroll lo maneje el modal body */
+  line-height: 1.6;
+}
+
+.outlook-editor:focus {
+  border-color: var(--border-focus) !important;
+}
+
+.outlook-editor[placeholder]:empty:before {
+  content: attr(placeholder);
+  color: var(--text-muted);
+  cursor: text;
+}
+
+/* Side Preview Details */
+.mini-calendar-header {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 15px;
+  text-transform: capitalize;
+}
+
+.mini-schedule {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin-top: 10px;
+}
+
+.schedule-slot {
+  display: flex;
+  border-bottom: 1px solid var(--border-primary);
+  height: 45px;
+  align-items: center;
+  opacity: 0.5;
+}
+
+.slot-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  width: 50px;
+  font-weight: 500;
+}
+
+.slot-content {
+  flex: 1;
+}
+
+.preview-event-block {
+  position: absolute;
+  left: 50px;
+  right: 0;
+  top: 45px;
+  /* Mock position for 9:00 */
+  background: var(--bg-progress-eval);
+  border-left: 4px solid var(--text-info);
+  padding: 10px;
+  font-size: 0.85rem;
+  color: var(--text-info);
+  border-radius: 6px;
+  box-shadow: var(--shadow-medium);
+}
+
+.preview-event-block.status-rojo {
+  border-left-color: var(--text-danger);
+  background: var(--bg-progress-eval);
+  color: var(--text-danger);
+}
+
+.preview-event-block.status-amarillo {
+  border-left-color: var(--text-warning);
+  background: var(--bg-progress-eval);
+  color: var(--text-warning);
+}
+
+.preview-event-block.status-verde {
+  border-left-color: var(--text-success);
+  background: var(--bg-progress-eval);
+  color: var(--text-success);
+}
+
+
+
+/* Estilos específicos para modo claro para asegurar visibilidad */
+[data-theme="light"] {
+  --calendar-filter: none;
+}
+
+[data-theme="light"] .bitacora-calendar-container {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+[data-theme="light"] .calendar-nav,
+[data-theme="light"] .view-selector,
+[data-theme="light"] .calendar-day:not(.today),
+[data-theme="light"] .week-day-col:not(.today),
+[data-theme="light"] .week-day-header,
+[data-theme="light"] .calendar-day-view {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .week-day-col.today {
+  background: var(--bg-info-light) !important;
+}
+
+[data-theme="light"] .nav-btn {
+  background: #ffffff !important;
+  color: #64748b !important;
+}
+
+[data-theme="light"] .nav-btn:hover {
+  color: white !important;
+}
+
+[data-theme="light"] .calendar-day:hover,
+[data-theme="light"] .week-day-col:hover {
+  background: #f1f5f9 !important;
+}
+
+[data-theme="light"] .day-number,
+[data-theme="light"] .calendar-day-name,
+[data-theme="light"] .outlook-status-selector,
+[data-theme="light"] .current-view-title {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .outlook-title-input {
+  color: #1e293b !important;
+}
+
+[data-theme="light"] .header-top h1,
+[data-theme="light"] .day-task-detail h4 {
+  color: #1e293b !important;
+}
+
+[data-theme="light"] .day-task-detail {
+  border-color: #e2e8f0 !important;
+}
+
+/* Evitar que el azul del hover sobrescriba el color de estado */
+[data-theme="light"] .day-task-detail:hover:not(.status-rojo):not(.status-amarillo):not(.status-verde) {
+  border-color: var(--text-info) !important;
+}
+
+[data-theme="light"] .task-html-desc {
+  color: #475569 !important;
+}
+
+[data-theme="dark"] {
+  --calendar-filter: invert(1);
+}
+
+/* Renderización de HTML en descripciones */
+.task-html-desc ul,
+.task-html-desc ol {
+  padding-left: 20px;
+  margin: 5px 0;
+}
+
+.task-html-desc b,
+.task-html-desc strong {
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   UNIFIED STATUS COLORS (MUST BE AT THE END TO WIN BY CASCADE)
+   ========================================================================== */
+
+/* Unified Status Colors for all views */
+.calendar-event.status-rojo,
+.calendar-event-card.status-rojo,
+.day-task-detail.status-rojo {
+  background: #fff1f0 !important;
+  border-color: #ffa39e !important;
+  border-left: 10px solid var(--text-danger) !important;
+  color: #c53030 !important;
+}
+
+.calendar-event.status-amarillo,
+.calendar-event-card.status-amarillo,
+.day-task-detail.status-amarillo {
+  background: #fffbe6 !important;
+  border-color: #ffe58f !important;
+  border-left: 10px solid var(--text-warning) !important;
+  color: #b7791f !important;
+}
+
+.calendar-event.status-verde,
+.calendar-event-card.status-verde,
+.day-task-detail.status-verde {
+  background: #f6ffed !important;
+  border-color: #b7eb8f !important;
+  border-left: 10px solid var(--text-success) !important;
+  color: #2f855a !important;
+}
+
+/* Hover effects that respect the status color and theme */
+[data-theme="light"] .day-task-detail.status-rojo:hover {
+  border-color: var(--text-danger) !important;
+  background: #fff5f5 !important;
+}
+
+[data-theme="light"] .day-task-detail.status-amarillo:hover {
+  border-color: var(--text-warning) !important;
+  background: #fffdf0 !important;
+}
+
+[data-theme="light"] .day-task-detail.status-verde:hover {
+  border-color: var(--text-success) !important;
+  background: #fafff5 !important;
+}
+
+[data-theme="dark"] .day-task-detail.status-rojo:hover {
+  border-color: #fb7185 !important;
+  background: rgba(231, 76, 60, 0.35) !important;
+}
+
+[data-theme="dark"] .day-task-detail.status-amarillo:hover {
+  border-color: #fbbf24 !important;
+  background: rgba(230, 167, 0, 0.35) !important;
+}
+
+[data-theme="dark"] .day-task-detail.status-verde:hover {
+  border-color: #34d399 !important;
+  background: rgba(28, 169, 122, 0.35) !important;
+}
+
+.day-task-detail.status-rojo:hover {
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.2) !important;
+}
+
+.day-task-detail.status-amarillo:hover {
+  box-shadow: 0 4px 15px rgba(230, 167, 0, 0.2) !important;
+}
+
+.day-task-detail.status-verde:hover {
+  box-shadow: 0 4px 15px rgba(28, 169, 122, 0.2) !important;
+}
+
+/* Dark theme overrides for unified status */
+[data-theme="dark"] .status-rojo {
+  background: rgba(231, 76, 60, 0.25) !important;
+  color: #fb7185 !important;
+  border-color: rgba(231, 76, 60, 0.4) !important;
+}
+
+[data-theme="dark"] .status-amarillo {
+  background: rgba(230, 167, 0, 0.25) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(230, 167, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .status-verde {
+  background: rgba(28, 169, 122, 0.25) !important;
+  color: #34d399 !important;
+  border-color: rgba(28, 169, 122, 0.4) !important;
 }
