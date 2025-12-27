@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { FaPlus, FaEdit, FaTrash, FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCalendarWeek, FaCalendarDay, FaTasks, FaFileAlt, FaUsers, FaTrafficLight } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from "react";
+import { FaPlus, FaEdit, FaTrash, FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCalendarWeek, FaCalendarDay, FaTasks, FaFileAlt, FaUsers, FaTrafficLight, FaBold, FaItalic, FaListUl, FaListOl } from "react-icons/fa";
 import "./AdminBitacora.css";
 import { BACKEND_URL } from '../utils/api';
 
@@ -13,6 +13,7 @@ const AdminBitacora = () => {
   const [editingTarea, setEditingTarea] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("month"); // "month", "week", "day"
+  const editorRef = useRef(null);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -126,6 +127,12 @@ const AdminBitacora = () => {
       deadline: tarea.deadline ? tarea.deadline.split("T")[0] : "",
     });
     setShowModal(true);
+    // Usar un pequeño timeout para asegurar que el ref esté disponible si el modal se acaba de abrir
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = tarea.descripcion || "";
+      }
+    }, 10);
   };
 
   // Navegación
@@ -161,7 +168,19 @@ const AdminBitacora = () => {
       const isToday = isSameDay(new Date(), date);
 
       cells.push(
-        <div key={d} className={`calendar-day ${isToday ? 'today' : ''}`} onClick={() => { setViewMode("day"); setCurrentDate(date); }}>
+        <div key={d} className={`calendar-day ${isToday ? 'today' : ''}`} onClick={() => {
+          setFormData({
+            titulo: "",
+            descripcion: "",
+            estado: "rojo",
+            asignados: [],
+            deadline: date.toISOString().split("T")[0]
+          });
+          setEditingTarea(null);
+          setShowModal(true);
+          fetchUsuarios();
+          setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, 10);
+        }}>
           <span className="day-number">{d}</span>
           <div className="day-events">
             {tareasDia.map(tarea => (
@@ -198,7 +217,19 @@ const AdminBitacora = () => {
           const tareasDia = tareas.filter(t => isSameDay(new Date(t.deadline), date));
           const isToday = isSameDay(new Date(), date);
           return (
-            <div key={date.toString()} className={`week-day-col ${isToday ? 'today' : ''}`} onClick={() => { setViewMode("day"); setCurrentDate(date); }}>
+            <div key={date.toString()} className={`week-day-col ${isToday ? 'today' : ''}`} onClick={() => {
+              setFormData({
+                titulo: "",
+                descripcion: "",
+                estado: "rojo",
+                asignados: [],
+                deadline: date.toISOString().split("T")[0]
+              });
+              setEditingTarea(null);
+              setShowModal(true);
+              fetchUsuarios();
+              setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, 10);
+            }}>
               <div className="week-day-header">
                 <span className="day-name">{dayNames[date.getDay()]}</span>
                 <span className="day-num">{date.getDate()}</span>
@@ -236,7 +267,7 @@ const AdminBitacora = () => {
               <div key={tarea.id} className={`day-task-detail status-${tarea.estado}`} onClick={() => handleEdit(tarea)}>
                 <div className="task-main-info">
                   <h4>{tarea.titulo}</h4>
-                  <p>{tarea.descripcion}</p>
+                  <div className="task-html-desc" dangerouslySetInnerHTML={{ __html: tarea.descripcion }}></div>
                 </div>
                 <div className="task-actions-large">
                   <button className="btn-edit" onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }}><FaEdit /> Editar</button>
@@ -255,14 +286,20 @@ const AdminBitacora = () => {
       <div className="bitacora-calendar-container">
         <div className="calendar-header-admin">
           <div className="header-top">
-            <h1><FaTasks style={{ color: 'white', marginRight: '10px' }} /> Bitácora Global</h1>
+            <h1><FaTasks className="header-icon" /> Bitácora Global</h1>
             <div className="header-actions">
               <div className="view-selector">
                 <button className={viewMode === "month" ? "active" : ""} onClick={() => setViewMode("month")}><FaCalendarAlt /> Mes</button>
                 <button className={viewMode === "week" ? "active" : ""} onClick={() => setViewMode("week")}><FaCalendarWeek /> Semana</button>
                 <button className={viewMode === "day" ? "active" : ""} onClick={() => setViewMode("day")}><FaCalendarDay /> Día</button>
               </div>
-              <button className="btn-primary create-btn" onClick={() => { setShowModal(true); fetchUsuarios(); }}><FaPlus /> Nueva Tarea</button>
+              <button className="btn-primary create-btn" onClick={() => {
+                setFormData({ titulo: "", descripcion: "", estado: "rojo", asignados: [], deadline: new Date().toISOString().split("T")[0] });
+                setEditingTarea(null);
+                setShowModal(true);
+                fetchUsuarios();
+                setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, 10);
+              }}><FaPlus /> Nueva Tarea</button>
             </div>
           </div>
 
@@ -289,88 +326,131 @@ const AdminBitacora = () => {
       </div>
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>{editingTarea ? "✏️ Editar Tarea" : "➕ Nueva Tarea"}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label><FaEdit style={{ color: 'white', marginRight: '8px' }} /> Título:</label>
-                <input
-                  type="text"
-                  value={formData.titulo}
-                  onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                  placeholder="Ej: Revisión de inventario semanal"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label><FaFileAlt style={{ color: 'white', marginRight: '8px' }} /> Descripción:</label>
-                <textarea
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  placeholder="Describe detalladamente los pasos a seguir para completar la tarea..."
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label><FaTrafficLight style={{ color: 'white', marginRight: '8px' }} /> Estado:</label>
+        <div className="modal-overlay outlook-modal">
+          <div className="modal-content outlook-content">
+            {/* Barra de herramientas superior estilo Outlook */}
+            <div className="outlook-toolbar">
+              <button className="btn-outlook-save" onClick={handleSubmit} disabled={submitting}>
+                <FaCalendarAlt /> {editingTarea ? "Guardar" : "Enviar"}
+              </button>
+              <button className="btn-outlook-cancel" onClick={() => setShowModal(false)}>
+                ❌ Cancelar
+              </button>
+              <div className="outlook-toolbar-divider"></div>
+              <div className="outlook-status-selector">
+                <label>Estado:</label>
                 <select value={formData.estado} onChange={(e) => setFormData({ ...formData, estado: e.target.value })}>
                   <option value="rojo">🔴 Pendiente</option>
                   <option value="amarillo">🟡 En Progreso</option>
                   <option value="verde">✅ Completado</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label><FaCalendarAlt style={{ color: 'white', marginRight: '8px' }} /> Fecha Límite:</label>
-                <input type="date" value={formData.deadline} onChange={(e) => setFormData({ ...formData, deadline: e.target.value })} required />
+            </div>
+
+            <div className="outlook-body">
+              <div className="outlook-main-form">
+                {/* Título Grande */}
+                <div className="form-group large-group">
+                  <input
+                    type="text"
+                    className="outlook-title-input"
+                    value={formData.titulo}
+                    onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                    placeholder="Agregar un título"
+                    required
+                  />
+                </div>
+
+                {/* Selección de Usuarios estilo "Invite a los asistentes" */}
+                <div className="form-group outlook-row">
+                  <div className="row-icon"><FaUsers /></div>
+                  <div className="row-content">
+                    <label>Asistentes:</label>
+                    <div className="outlook-user-selector">
+                      {loadingUsuarios ? (
+                        <div className="spinner-mini"></div>
+                      ) : (
+                        <div className="outlook-users-list">
+                          {usuarios.map((u) => {
+                            const isSelected = formData.asignados.includes(u.id);
+                            return (
+                              <div
+                                key={u.id}
+                                className={`outlook-user-chip ${isSelected ? 'selected' : ''}`}
+                                onClick={() => {
+                                  const asignados = isSelected
+                                    ? formData.asignados.filter(id => id !== u.id)
+                                    : [...formData.asignados, u.id];
+                                  setFormData({ ...formData, asignados });
+                                }}
+                              >
+                                {u.nombre}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fecha y Hora */}
+                <div className="form-group outlook-row">
+                  <div className="row-icon"><FaCalendarAlt /></div>
+                  <div className="row-content horizontal">
+                    <input
+                      type="date"
+                      value={formData.deadline}
+                      onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                      className="outlook-date-input"
+                      required
+                    />
+                    <div className="all-day-toggle">
+                      <input type="checkbox" checked={true} readOnly /> Todo el día
+                    </div>
+                  </div>
+                </div>
+
+                {/* Descripción / Cuerpo del correo con Editor Enriquecido */}
+                <div className="form-group outlook-description">
+                  <div className="description-toolbar">
+                    <button type="button" title="Negrita" onClick={() => document.execCommand('bold', false, null)}><FaBold /></button>
+                    <button type="button" title="Cursiva" onClick={() => document.execCommand('italic', false, null)}><FaItalic /></button>
+                    <div className="toolbar-sep"></div>
+                    <button type="button" title="Lista con viñetas" onClick={() => document.execCommand('insertUnorderedList', false, null)}><FaListUl /></button>
+                    <button type="button" title="Lista numerada" onClick={() => document.execCommand('insertOrderedList', false, null)}><FaListOl /></button>
+                  </div>
+                  <div
+                    ref={editorRef}
+                    className="outlook-editor"
+                    contentEditable={true}
+                    onInput={(e) => setFormData({ ...formData, descripcion: e.currentTarget.innerHTML })}
+                    onBlur={(e) => setFormData({ ...formData, descripcion: e.currentTarget.innerHTML })}
+                    placeholder="Agregue una descripción de la tarea..."
+                  ></div>
+                </div>
               </div>
-              <div className="form-group">
-                <label><FaUsers style={{ color: 'white', marginRight: '8px' }} /> Asignar usuarios:</label>
-                <div className="user-selection-panel">
-                  {loadingUsuarios ? (
-                    <div className="loading-users">
-                      <div className="spinner-mini"></div>
-                      <span>Cargando usuarios...</span>
+
+              {/* Lado derecho estilo Calendario de Outlook (Opcional, se puede omitir o poner algo estético) */}
+              <div className="outlook-side-preview">
+                <div className="mini-calendar-header">
+                  <span>{new Date(formData.deadline || new Date()).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
+                </div>
+                <div className="mini-schedule">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="schedule-slot">
+                      <span className="slot-time">{8 + i}:00</span>
+                      <div className="slot-content"></div>
                     </div>
-                  ) : usuarios.length === 0 ? (
-                    <div className="no-users">
-                      <p>No hay usuarios disponibles</p>
-                    </div>
-                  ) : (
-                    <div className="users-grid-selector">
-                      {usuarios.map((u) => {
-                        const isSelected = formData.asignados.includes(u.id);
-                        return (
-                          <div
-                            key={u.id}
-                            className={`user-chip-item ${isSelected ? 'active' : ''}`}
-                            onClick={() => {
-                              const asignados = isSelected
-                                ? formData.asignados.filter(id => id !== u.id)
-                                : [...formData.asignados, u.id];
-                              setFormData({ ...formData, asignados });
-                            }}
-                          >
-                            <div className="user-avatar-mini">
-                              {u.nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="user-info-mini">
-                              <span className="user-name-mini">{u.nombre}</span>
-                              <span className="user-role-mini-label">{u.rol}</span>
-                            </div>
-                            {isSelected && <div className="user-check-icon">✓</div>}
-                          </div>
-                        );
-                      })}
+                  ))}
+                  {formData.titulo && (
+                    <div className={`preview-event-block status-${formData.estado}`}>
+                      <strong>{formData.titulo}</strong>
                     </div>
                   )}
                 </div>
               </div>
-              <div className="form-actions">
-                <button type="submit" className="btn-primary" disabled={submitting}>{editingTarea ? "💾 Guardar" : "✨ Crear"}</button>
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>❌ Cancelar</button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
