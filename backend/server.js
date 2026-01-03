@@ -580,13 +580,20 @@ const {
 const documentUpload = multer({
   storage: multer.memoryStorage(),
   fileFilter: function (req, file, cb) {
-    // Permitir solo PDF, Word, Excel
+    // Permitir PDF, Word, Excel + Imágenes y Videos
     const allowedTypes = [
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/quicktime',
+      'video/x-msvideo'
     ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -594,7 +601,7 @@ const documentUpload = multer({
       cb(new Error('Tipo de archivo no permitido'));
     }
   },
-  limits: { fileSize: 20 * 1024 * 1024 } // 20MB máximo
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB máximo
 });
 
 // Servir documentos como archivos estáticos
@@ -2264,7 +2271,10 @@ app.get('/api/bitacora', verifyToken, async (req, res) => {
     const connection = await createConnection();
     // Primero obtener todas las tareas
     const [allTareas] = await connection.execute(`
-      SELECT id, titulo, descripcion, estado, asignados, deadline, created_at, updated_at 
+      SELECT 
+        id, titulo, descripcion, estado, asignados, deadline, created_at, updated_at,
+        evidencia_inicial_url, evidencia_final_url, evidencia_inicial_fecha, evidencia_final_fecha,
+        evidencia_inicial_mimetype, evidencia_final_mimetype
       FROM bitacora_global 
       ORDER BY created_at DESC
     `);
@@ -2477,11 +2487,26 @@ app.put('/api/bitacora/:id', verifyToken, async (req, res) => {
         return res.status(400).json({ success: false, message: 'La tarea ha vencido y no puede ser modificada' });
       }
 
+      // IMPORTANTE: El empleado ya no puede cambiar el estado manualmente.
+      // Solo el Admin puede pasar por aquí y cambiar el estado directamente.
+      if (req.user.rol !== 'Admin') {
+        await connection.end();
+        return res.status(403).json({
+          success: false,
+          message: 'Como empleado, no puedes cambiar el estado manualmente. Debes subir una evidencia para que el sistema lo cambie automáticamente.'
+        });
+      }
+
+      // Reemplazo del bloque para restringir actualización manual por empleados
+      // El empleado ya no puede cambiar el estado aquí, solo el admin.
+      // Se mantiene la lógica de admin para permitir cambios totales de la tarea.
+      // Pero si el rol NO es Admin y se intenta cambiar el estado, se rechaza o redirige a la subida de evidencia.
+
       await connection.execute(`
         UPDATE bitacora_global SET estado = ?, updated_at = NOW() WHERE id = ?
       `, [estado, tareaId]);
 
-      console.log('✅ Estado actualizado por usuario');
+      console.log('✅ Estado actualizado por usuario (Solo Administrador puede hacer esto ahora o mediante evidencia)');
     }
 
     // Si la tarea se marca como completa, notificar a los admins
@@ -2506,6 +2531,235 @@ app.put('/api/bitacora/:id', verifyToken, async (req, res) => {
       success: false,
       message: 'Error interno del servidor',
       error: error.message
+    });
+  }
+});
+
+// Endpoint para subir evidencia y cambiar estado automáticamente
+app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evidence'), async (req, res) => {
+  const { id: userId } = req.user;
+  const tareaId = req.params.id;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No se subió ningún archivo de evidencia.' });
+    }
+
+    const connection = await createConnection();
+
+    // Verificar que la tarea existe y que el usuario está asignado
+    const [rows] = await connection.execute('SELECT * FROM bitacora_global WHERE id = ?', [tareaId]);
+    if (rows.length === 0) {
+      await connection.end();
+      return res.status(404).json({ success: false, message: 'Tarea no encontrada' });
+    }
+
+    const tarea = rows[0];
+    const asignadosArr = JSON.parse(tarea.asignados || "[]");
+
+    // Solo el asignado o el Admin pueden subir evidencias
+    if (req.user.rol !== 'Admin' && !asignadosArr.includes(userId)) {
+      await connection.end();
+      return res.status(403).json({ success: false, message: 'No tienes permisos para subir evidencias en esta tarea' });
+    }
+
+    // Subir a Cloudinary
+    console.log('☁️ Subiendo evidencia a Cloudinary...');
+    const cloudinaryResult = await uploadDocumentToCloudinary(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+
+    let nuevoEstado = tarea.estado;
+    let updateQuery = '';
+    let updateParams = [];
+
+    if (!tarea.evidencia_inicial_url) {
+      // Primera evidencia -> En Proceso (amarillo) + Fecha
+      nuevoEstado = 'amarillo';
+      updateQuery = 'UPDATE bitacora_global SET evidencia_inicial_url = ?, evidencia_inicial_mimetype = ?, evidencia_inicial_fecha = NOW(), estado = ?, updated_at = NOW() WHERE id = ?';
+      updateParams = [cloudinaryResult.url, req.file.mimetype, nuevoEstado, tareaId];
+    } else if (!tarea.evidencia_final_url) {
+      // Segunda evidencia -> Completado (verde) + Fecha
+      nuevoEstado = 'verde';
+      updateQuery = 'UPDATE bitacora_global SET evidencia_final_url = ?, evidencia_final_mimetype = ?, evidencia_final_fecha = NOW(), estado = ?, updated_at = NOW() WHERE id = ?';
+      updateParams = [cloudinaryResult.url, req.file.mimetype, nuevoEstado, tareaId];
+    } else {
+      await connection.end();
+      return res.status(400).json({ success: false, message: 'Esta tarea ya tiene todas las evidencias requeridas (inicial y final).' });
+    }
+
+    await connection.execute(updateQuery, updateParams);
+
+    // Notificar a los admins si se completa
+    if (nuevoEstado === 'verde') {
+      const [admins] = await connection.execute("SELECT id FROM usuarios WHERE rol = 'Admin' AND activo = 1");
+      const [[userRow]] = await connection.execute('SELECT nombre FROM usuarios WHERE id = ?', [userId]);
+      for (const admin of admins) {
+        await connection.execute(
+          'INSERT INTO notifications (user_id, message, type, data) VALUES (?, ?, ?, ?)',
+          [admin.id, `El usuario ${userRow.nombre} ha completado la tarea subiendo la evidencia final: ${tarea.titulo}`, 'tarea_completada', JSON.stringify({ tareaId })]
+        );
+      }
+    }
+
+    const uploadDate = new Date().toISOString();
+    await connection.end();
+    res.json({
+      success: true,
+      message: `Evidencia subida correctamente. El estado ahora es: ${nuevoEstado === 'amarillo' ? 'En Proceso' : 'Completado'}`,
+      url: cloudinaryResult.url,
+      estado: nuevoEstado,
+      fecha: uploadDate
+    });
+
+  } catch (error) {
+    console.error('Error subiendo evidencia:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor al subir evidencia: ' + error.message });
+  }
+});
+
+// Endpoint para eliminar evidencia (retroceder estado)
+app.delete('/api/bitacora/:id/evidence/:type', verifyToken, async (req, res) => {
+  const { id: userId, rol } = req.user;
+  const tareaId = req.params.id;
+  const { type } = req.params; // 'inicio' o 'cierre'
+
+  try {
+    const connection = await createConnection();
+    const [rows] = await connection.execute('SELECT * FROM bitacora_global WHERE id = ?', [tareaId]);
+
+    if (rows.length === 0) {
+      await connection.end();
+      return res.status(404).json({ success: false, message: 'Tarea no encontrada' });
+    }
+
+    const tarea = rows[0];
+    const asignadosArr = JSON.parse(tarea.asignados || "[]");
+
+    if (rol !== 'Admin' && !asignadosArr.includes(userId)) {
+      await connection.end();
+      return res.status(403).json({ success: false, message: 'No tienes permisos para modificar esta tarea' });
+    }
+
+    // No permitir borrar si ya está completada (verde), a menos que sea Admin
+    if (tarea.estado === 'verde' && rol !== 'Admin') {
+      await connection.end();
+      return res.status(403).json({ success: false, message: 'No puedes borrar evidencias de una tarea ya completada.' });
+    }
+
+    let updateQuery = '';
+    let nuevoEstado = tarea.estado;
+    let urlToDelete = null;
+
+    if (type === 'inicio') {
+      urlToDelete = tarea.evidencia_inicial_url;
+      nuevoEstado = 'rojo';
+      updateQuery = 'UPDATE bitacora_global SET evidencia_inicial_url = NULL, evidencia_inicial_fecha = NULL, estado = ?, updated_at = NOW() WHERE id = ?';
+    } else if (type === 'cierre') {
+      urlToDelete = tarea.evidencia_final_url;
+      nuevoEstado = 'amarillo';
+      updateQuery = 'UPDATE bitacora_global SET evidencia_final_url = NULL, evidencia_final_fecha = NULL, estado = ?, updated_at = NOW() WHERE id = ?';
+    } else {
+      await connection.end();
+      return res.status(400).json({ success: false, message: 'Tipo de evidencia inválido' });
+    }
+
+    // Eliminar de Cloudinary si existe la URL
+    if (urlToDelete && urlToDelete.includes('cloudinary.com')) {
+      try {
+        // Usar la nueva función que auto-detecta el tipo desde la URL
+        await deleteDocumentFromCloudinary(urlToDelete);
+        console.log('🗑️ Evidencia eliminada de Cloudinary con éxito');
+      } catch (cloudinaryError) {
+        console.warn('⚠️ No se pudo eliminar de Cloudinary (continuando con BD):', cloudinaryError.message);
+      }
+    }
+
+    await connection.execute(updateQuery, [nuevoEstado, tareaId]);
+    await connection.end();
+
+    res.json({ success: true, message: 'Evidencia eliminada y estado actualizado', nuevoEstado });
+  } catch (error) {
+    console.error('Error eliminando evidencia:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
+
+// Endpoint proxy para descargar archivos de Cloudinary
+// Evita problemas de CORS y autenticación al descargar desde el navegador
+app.get('/api/proxy-download', verifyToken, async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    if (!url || !url.includes('cloudinary.com')) {
+      return res.status(400).json({ success: false, message: 'URL inválida' });
+    }
+
+    console.log('🔽 Descargando archivo de Cloudinary:', url);
+
+    const axios = require('axios');
+
+    try {
+      // Intentar descarga directa primero
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          'Accept': '*/*'
+        },
+        maxRedirects: 5,
+        timeout: 30000
+      });
+
+      const urlParts = url.split('/');
+      const filename = urlParts[urlParts.length - 1].split('?')[0];
+
+      console.log('✅ Archivo descargado exitosamente:', filename);
+
+      res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      if (response.headers['content-length']) {
+        res.setHeader('Content-Length', response.headers['content-length']);
+      }
+
+      res.send(Buffer.from(response.data));
+    } catch (axiosError) {
+      // Si falla, intentar con fl_attachment
+      console.log('⚠️ Descarga directa falló, intentando con fl_attachment...');
+
+      let downloadUrl = url;
+      if (url.includes('/upload/')) {
+        downloadUrl = url.replace('/upload/', '/upload/fl_attachment/');
+      }
+
+      const retryResponse = await axios.get(downloadUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          'Accept': '*/*'
+        },
+        maxRedirects: 5,
+        timeout: 30000
+      });
+
+      const urlParts = url.split('/');
+      const filename = urlParts[urlParts.length - 1].split('?')[0];
+
+      res.setHeader('Content-Type', retryResponse.headers['content-type'] || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      if (retryResponse.headers['content-length']) {
+        res.setHeader('Content-Length', retryResponse.headers['content-length']);
+      }
+
+      res.send(Buffer.from(retryResponse.data));
+    }
+  } catch (error) {
+    console.error('❌ Error en proxy de descarga:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error al descargar el archivo: ' + error.message
     });
   }
 });

@@ -150,6 +150,18 @@ const AdminBitacora = () => {
       d1.getUTCFullYear() === d2.getUTCFullYear();
   };
 
+  const formatFechaEvidencia = (fechaStr) => {
+    if (!fechaStr) return "N/A";
+    const f = new Date(fechaStr);
+    return f.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + " hs";
+  };
+
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -268,6 +280,27 @@ const AdminBitacora = () => {
                 <div className="task-main-info">
                   <h4>{tarea.titulo}</h4>
                   <div className="task-html-desc" dangerouslySetInnerHTML={{ __html: tarea.descripcion }}></div>
+
+                  {/* Evidence Display for Admin */}
+                  {(tarea.evidencia_inicial_url || tarea.evidencia_final_url) && (
+                    <div className="admin-evidence-box" style={{ marginTop: '10px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                      <p style={{ fontSize: '0.85rem', marginBottom: '5px', opacity: 0.8 }}>📋 Evidencias:</p>
+                      <div style={{ display: 'flex', gap: '15px' }}>
+                        {tarea.evidencia_inicial_url && (
+                          <div className="ev-item">
+                            <a href={tarea.evidencia_inicial_url} target="_blank" rel="noreferrer" style={{ color: '#ffd700', textDecoration: 'none', fontSize: '0.85rem' }}>📂 Inicio</a>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '5px' }}>({formatFechaEvidencia(tarea.evidencia_inicial_fecha)})</span>
+                          </div>
+                        )}
+                        {tarea.evidencia_final_url && (
+                          <div className="ev-item">
+                            <a href={tarea.evidencia_final_url} target="_blank" rel="noreferrer" style={{ color: '#4caf50', textDecoration: 'none', fontSize: '0.85rem' }}>📂 Cierre</a>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '5px' }}>({formatFechaEvidencia(tarea.evidencia_final_fecha)})</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="task-actions-large">
                   <button className="btn-edit" onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }}><FaEdit /> Editar</button>

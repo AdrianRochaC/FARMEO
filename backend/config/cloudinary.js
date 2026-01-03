@@ -40,53 +40,57 @@ async function uploadDocumentToCloudinary(fileBuffer, originalName, mimeType) {
       reject(error);
       return;
     }
-    
+
     console.log('☁️ Iniciando subida a Cloudinary...');
     console.log('📄 Archivo:', originalName);
     console.log('📊 Tamaño:', fileBuffer.length, 'bytes');
     console.log('📋 Tipo MIME:', mimeType);
-    
+
     // Detectar si es un video por MIME type o por extensión
-    const isVideo = mimeType.startsWith('video/') || 
-                    originalName.toLowerCase().match(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/);
-    
-    // Determinar el resource_type según el tipo de archivo
-    let resourceType = 'raw'; // Por defecto para documentos y videos MP4
-    
+    const isVideo = mimeType.startsWith('video/') ||
+      originalName.toLowerCase().match(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/);
+
+    // Determinar el resource_type de forma explícita
+    // PDFs y documentos DEBEN ser 'raw' (como en Documentos que funciona)
+    // Solo imágenes deben ser 'image'
+    let resourceType = 'raw'; // Por defecto raw para documentos
+
     if (mimeType.startsWith('image/')) {
       resourceType = 'image';
-    } else if (isVideo) {
-      // Los videos MP4 se guardan como archivos (raw) para persistencia
-      // Similar a los documentos, no como videos procesados
-      resourceType = 'raw';
     }
-    
+
     console.log('📦 Resource Type:', resourceType);
-    console.log('🎬 Es video:', isVideo ? '✅ Sí' : '❌ No');
-    
-    // Crear nombre único para el archivo
+
+    // Preparar el nombre limpio sin extensión para el publicId
     const timestamp = Date.now();
-    const sanitizedName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    
+    const dots = originalName.split('.');
+    const ext = dots.pop().toLowerCase();
+    const nameWithoutExt = dots.join('.');
+    const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9-]/g, '_');
+
     // Determinar carpeta según el tipo de archivo
     const folder = isVideo ? 'videos' : 'documents';
-    const publicId = `${folder}/${timestamp}_${sanitizedName}`;
-    
+
+    // public_id NO debe incluir el nombre de la carpeta si usamos la opción 'folder'
+    // Para asegurar compatibilidad con la configuración de permisos de Cloudinary,
+    // NO incluimos la extensión en el public_id, incluso para 'raw'.
+    const publicId = `${timestamp}_${sanitizedName}`;
+
     console.log('🆔 Public ID generado:', publicId);
-    console.log('📁 Carpeta seleccionada:', folder);
-    console.log('📂 Ruta completa en Cloudinary:', publicId);
-    
+    console.log('📁 Folder:', folder);
+    console.log('📄 Extension:', ext);
+
     const uploadOptions = {
       resource_type: resourceType,
       folder: folder,
-      public_id: publicId.split('.')[0], // Sin extensión
+      public_id: publicId,
       use_filename: false,
-      unique_filename: true,
+      unique_filename: false,
       overwrite: false
     };
-    
+
     console.log('⚙️ Opciones de subida:', JSON.stringify(uploadOptions, null, 2));
-    
+
     // Subir el archivo
     const uploadStream = cloudinary.uploader.upload_stream(
       uploadOptions,
@@ -114,7 +118,7 @@ async function uploadDocumentToCloudinary(fileBuffer, originalName, mimeType) {
         }
       }
     );
-    
+
     // Escribir el buffer al stream
     uploadStream.end(fileBuffer);
   });
@@ -128,6 +132,18 @@ async function uploadDocumentToCloudinary(fileBuffer, originalName, mimeType) {
  */
 async function deleteDocumentFromCloudinary(publicId, resourceType = 'raw') {
   try {
+    // Si el publicId es una URL, intentar extraer info
+    if (publicId && publicId.startsWith('http')) {
+      const info = extractInfoFromUrl(publicId);
+      if (info) {
+        const result = await cloudinary.uploader.destroy(info.publicId, {
+          resource_type: info.resourceType
+        });
+        console.log('✅ Documento eliminado de Cloudinary (auto-detect):', info.publicId);
+        return result;
+      }
+    }
+
     const result = await cloudinary.uploader.destroy(publicId, {
       resource_type: resourceType
     });
@@ -145,19 +161,57 @@ async function deleteDocumentFromCloudinary(publicId, resourceType = 'raw') {
  * @returns {string|null} - Public ID o null si no es una URL válida
  */
 function extractPublicIdFromUrl(url) {
+  const info = extractInfoFromUrl(url);
+  return info ? info.publicId : null;
+}
+
+/**
+ * Extraer información detallada de una URL de Cloudinary
+ * @param {string} url - URL de Cloudinary
+ * @returns {Object|null} - { publicId, resourceType, format } o null
+ */
+function extractInfoFromUrl(url) {
   if (!url || !url.includes('cloudinary.com')) {
     return null;
   }
-  
+
   try {
-    // Formato: https://res.cloudinary.com/cloud_name/resource_type/upload/v1234567890/folder/public_id.format
-    const match = url.match(/\/v\d+\/(.+?)(?:\.[^.]+)?$/);
+    // Formato: https://res.cloudinary.com/cloud_name/[image|video|raw]/upload/v1234567890/folder/public_id.format
+    const parts = url.split('/');
+    const uploadIndex = parts.indexOf('upload');
+
+    if (uploadIndex > 0) {
+      const resourceType = parts[uploadIndex - 1]; // image, video o raw
+
+      // El public_id está después de la versión (vXXXXXXXXXX)
+      const afterVersion = parts.slice(uploadIndex + 2).join('/');
+
+      // Para archivos 'raw', el public_id INCLUYE la extensión
+      // Para imágenes, se puede quitar
+      let publicId, format;
+
+      if (resourceType === 'raw') {
+        // Mantener la extensión en el public_id para archivos raw
+        publicId = afterVersion;
+        format = afterVersion.split('.').pop();
+      } else {
+        // Para imágenes, quitar la extensión
+        publicId = afterVersion.split('.')[0];
+        format = afterVersion.split('.').pop();
+      }
+
+      console.log('📋 Info extraída:', { publicId, resourceType, format });
+      return { publicId, resourceType, format };
+    }
+
+    // Fallback regex si el split falla
+    const match = url.match(/\/v\d+\/(.+?)$/);
     if (match) {
-      return match[1];
+      return { publicId: match[1], resourceType: 'raw', format: null };
     }
     return null;
   } catch (error) {
-    console.error('Error extrayendo public_id:', error);
+    console.error('Error extrayendo info de Cloudinary:', error);
     return null;
   }
 }
@@ -165,6 +219,6 @@ function extractPublicIdFromUrl(url) {
 module.exports = {
   uploadDocumentToCloudinary,
   deleteDocumentFromCloudinary,
-  extractPublicIdFromUrl
+  extractPublicIdFromUrl,
+  extractInfoFromUrl
 };
-
