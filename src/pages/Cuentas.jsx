@@ -19,8 +19,12 @@ const Cuentas = () => {
     nombre: "",
     email: "",
     rol: "",
-    activo: true
+    activo: true,
+    admin_asignado_id: null,
+    organizacion_id: null
   });
+  const [admins, setAdmins] = useState([]);
+  const [organizaciones, setOrganizaciones] = useState([]);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -34,7 +38,33 @@ const Cuentas = () => {
 
   useEffect(() => {
     loadUsers();
+    loadAdmins();
+    loadOrganizaciones();
   }, []);
+
+  const loadAdmins = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/users/admins`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins || []);
+      }
+    } catch (error) {
+      console.error('Error cargando admins:', error);
+    }
+  };
+
+  const loadOrganizaciones = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/organizaciones`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizaciones(data.organizaciones || []);
+      }
+    } catch (error) {
+      console.error('Error cargando organizaciones:', error);
+    }
+  };
 
   // Validar contraseña en tiempo real
   useEffect(() => {
@@ -108,7 +138,9 @@ const Cuentas = () => {
       nombre: user.nombre,
       email: user.email,
       rol: user.rol,
-      activo: user.activo
+      activo: user.activo,
+      admin_asignado_id: user.admin_asignado_id || null,
+      organizacion_id: user.organizacion_id || null
     });
     setIsEditing(false);
   };
@@ -134,7 +166,9 @@ const Cuentas = () => {
         nombre: selectedUser.nombre,
         email: selectedUser.email,
         rol: selectedUser.rol,
-        activo: selectedUser.activo
+        activo: selectedUser.activo,
+        admin_asignado_id: selectedUser.admin_asignado_id || null,
+        organizacion_id: selectedUser.organizacion_id || null
       });
     }
   };
@@ -510,6 +544,40 @@ const Cuentas = () => {
                       <span>Usuario activo</span>
                     </label>
                   </div>
+
+                  {admins.length > 0 && (
+                    <div className="form-group">
+                      <label>Admin Asignado</label>
+                      <select 
+                        value={editData.admin_asignado_id || ''} 
+                        onChange={(e) => handleInputChange('admin_asignado_id', e.target.value || null)}
+                      >
+                        <option value="">Sin admin asignado</option>
+                        {admins.map(admin => (
+                          <option key={admin.id} value={admin.id}>
+                            {admin.nombre} ({admin.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {organizaciones.length > 0 && (
+                    <div className="form-group">
+                      <label>Organización</label>
+                      <select 
+                        value={editData.organizacion_id || ''} 
+                        onChange={(e) => handleInputChange('organizacion_id', e.target.value || null)}
+                      >
+                        <option value="">Sin organización</option>
+                        {organizaciones.map(org => (
+                          <option key={org.id} value={org.id}>
+                            {org.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </form>
               )}
             </div>

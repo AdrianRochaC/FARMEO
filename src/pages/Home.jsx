@@ -14,6 +14,53 @@ const Home = () => {
   }
   
   const isAdmin = user.rol === "Admin" || user.rol === "Administrador";
+  const isSuperAdmin = user.rol === "SuperAdmin" || user.rol_detallado === "SuperAdmin";
+
+  // Tarjetas para SuperAdmin
+  const superAdminCards = [
+    {
+      title: "Panel de Aprobaciones",
+      icon: <FaBell size={36} color="#ef4444" />,
+      description: "Aprueba o rechaza evidencias, cursos y documentos.",
+      route: "/admin-aprobaciones",
+    },
+    {
+      title: "Gestión de Cursos",
+      icon: <BookOpenCheck size={36} color="#2962ff" />,
+      description: "Crea, edita y elimina cursos y evaluaciones.",
+      route: "/admin-courses",
+    },
+    {
+      title: "Bitácora",
+      icon: <ClipboardList size={36} color="#43e97b" />,
+      description: "Gestiona tareas y seguimiento de actividades.",
+      route: "/AdminBitacora",
+    },
+    {
+      title: "Cuentas",
+      icon: <Users2 size={36} color="#ff9800" />,
+      description: "Administra usuarios y permisos.",
+      route: "/cuentas",
+    },
+    {
+      title: "Dashboard",
+      icon: <BarChart3 size={36} color="#00bcd4" />,
+      description: "Visualiza el progreso general de la plataforma.",
+      route: "/dashboard",
+    },
+    {
+      title: "Perfil",
+      icon: <User size={36} color="#607d8b" />,
+      description: "Ver y editar tu perfil de administrador.",
+      route: "/perfil",
+    },
+    {
+      title: "Documentos",
+      icon: <FaFileAlt size={36} color="#2962ff" />,
+      description: "Accede a los documentos de la empresa.",
+      route: "/admin-documentos",
+    },
+  ];
 
   // Tarjetas para admin
   const adminCards = [
@@ -83,7 +130,7 @@ const Home = () => {
     },
   ];
 
-  const cards = isAdmin ? adminCards : userCards;
+  const cards = isSuperAdmin ? superAdminCards : (isAdmin ? adminCards : userCards);
 
   return (
     <div className="home-dashboard-bg">

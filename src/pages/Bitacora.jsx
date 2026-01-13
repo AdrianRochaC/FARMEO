@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { BACKEND_URL } from "../utils/api";
 import "./Bitacora.css";
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCalendarWeek, FaCalendarDay } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCalendarWeek, FaCalendarDay, FaCamera, FaVideo } from "react-icons/fa";
+import CameraCapture from "../components/CameraCapture";
 
 const Bitacora = () => {
   const [tareas, setTareas] = useState([]);
@@ -12,6 +13,9 @@ const Bitacora = () => {
   const [selectedTarea, setSelectedTarea] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState(null); // { url: string, type: 'img' | 'pdf' }
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraType, setCameraType] = useState('foto'); // 'foto' o 'video'
+  const [pendingEvidenceType, setPendingEvidenceType] = useState(null); // 'inicio' o 'cierre'
 
   const token = localStorage.getItem("authToken");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -67,12 +71,16 @@ const Bitacora = () => {
       });
       const data = await response.json();
       if (data.success) {
-        alert(`✅ ${data.estado === 'amarillo' ? 'Inicio de Tarea registrado' : 'Cierre de Tarea registrado'}`);
+        if (data.pendiente_aprobacion) {
+          alert(`⏳ Evidencia enviada. Pendiente de aprobación del SuperAdmin antes de ${data.estado === 'amarillo' ? 'iniciar' : 'finalizar'} la tarea.`);
+        } else {
+          alert(`✅ ${data.estado === 'amarillo' ? 'Inicio de Tarea registrado' : 'Cierre de Tarea registrado'}`);
+        }
         // Actualizar la tarea seleccionada en el modal para ver los cambios
         if (selectedTarea && selectedTarea.id === tareaId) {
           setSelectedTarea({
             ...selectedTarea,
-            estado: data.estado,
+            estado: data.estado || selectedTarea.estado,
             evidencia_inicial_url: data.estado === 'amarillo' ? data.url : selectedTarea.evidencia_inicial_url,
             evidencia_final_url: data.estado === 'verde' ? data.url : selectedTarea.evidencia_final_url,
             evidencia_inicial_fecha: data.estado === 'amarillo' ? data.fecha : selectedTarea.evidencia_inicial_fecha,
@@ -460,8 +468,8 @@ const Bitacora = () => {
             {!isCompleted && (
               <div className="upload-card">
                 <h4>{isInProgress ? 'Finalizar Tarea (Cierre)' : 'Iniciar Tarea (Inicio)'}</h4>
-                <p>Carga un archivo para {isInProgress ? 'cerrar la tarea' : 'iniciar la tarea'}.</p>
-                <div className="upload-control" style={{ marginTop: '15px' }}>
+                <p>Carga un archivo o captura evidencia para {isInProgress ? 'cerrar la tarea' : 'iniciar la tarea'}.</p>
+                <div className="upload-control" style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <label className="btn-open-tracking" style={{ cursor: 'pointer' }}>
                     {isInProgress ? '📤 Seleccionar Archivo de Cierre' : '📤 Seleccionar Archivo de Inicio'}
                     <input
@@ -470,6 +478,28 @@ const Bitacora = () => {
                       onChange={(e) => subirEvidencia(selectedTarea.id, e.target.files[0])}
                     />
                   </label>
+                  <button 
+                    className="btn-open-tracking"
+                    onClick={() => {
+                      setPendingEvidenceType(isInProgress ? 'cierre' : 'inicio');
+                      setCameraType('foto');
+                      setShowCamera(true);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <FaCamera /> Capturar Foto
+                  </button>
+                  <button 
+                    className="btn-open-tracking"
+                    onClick={() => {
+                      setPendingEvidenceType(isInProgress ? 'cierre' : 'inicio');
+                      setCameraType('video');
+                      setShowCamera(true);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <FaVideo /> Grabar Video
+                  </button>
                 </div>
               </div>
             )}
@@ -692,6 +722,16 @@ const Bitacora = () => {
       </div>
       {isModalOpen && renderTrackingModal()}
       {previewFile && renderFileViewer()}
+      {showCamera && (
+        <CameraCapture
+          tipo={cameraType}
+          onCapture={handleCameraCapture}
+          onClose={() => {
+            setShowCamera(false);
+            setPendingEvidenceType(null);
+          }}
+        />
+      )}
     </div>
   );
 };

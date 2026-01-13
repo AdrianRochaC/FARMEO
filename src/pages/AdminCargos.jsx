@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaEye, FaDownload, FaUsers, FaGraduationCap, FaFileAlt } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaEye, FaDownload, FaUsers, FaGraduationCap, FaFileAlt, FaChartLine, FaTasks } from 'react-icons/fa';
 import Modal from '../components/Modal';
 import './AdminCargos.css';
 import { BACKEND_URL } from '../utils/api';
@@ -478,7 +478,28 @@ const AdminCargos = () => {
               </div>
               
               <div className="cargo-footer">
-                <span className="click-hint">Haz clic para ver detalles</span>
+                <div className="cargo-action-buttons">
+                  <button 
+                    className="btn-action btn-progress"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDetailModal(cargo);
+                    }}
+                    title="Ver progreso y métricas"
+                  >
+                    <FaChartLine /> Ver Progreso
+                  </button>
+                  <button 
+                    className="btn-action btn-edit-task"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(cargo);
+                    }}
+                    title="Editar cargo"
+                  >
+                    <FaTasks /> Editar
+                  </button>
+                </div>
               </div>
             </div>
           ))}

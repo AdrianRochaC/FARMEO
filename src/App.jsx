@@ -16,6 +16,7 @@ import Home from './pages/Home';
 import AdminDocumentos from "./pages/AdminDocumentos";
 import Documentos from "./pages/Documentos";
 import AdminCargos from "./pages/AdminCargos";
+import AdminAprobaciones from "./pages/AdminAprobaciones";
 
 const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -34,18 +35,20 @@ const useAuth = () => {
   }, []);
 
   const isAdmin = user && (user.rol === 'Admin' || user.rol === 'Administrador');
+  const isSuperAdmin = user && (user.rol === 'SuperAdmin' || user.rol_detallado === 'SuperAdmin');
 
-  return { user, isAdmin, loading };
+  return { user, isAdmin, isSuperAdmin, loading };
 };
 
-const ProtectedRoute = ({ children, adminOnly = false, userOnly = false }) => {
-  const { user, isAdmin, loading } = useAuth();
+const ProtectedRoute = ({ children, adminOnly = false, userOnly = false, superAdminOnly = false }) => {
+  const { user, isAdmin, isSuperAdmin, loading } = useAuth();
 
   if (loading) return <div>Cargando...</div>;
   if (!user) return <Navigate to="/login" replace />;
 
-  if (adminOnly && !isAdmin) return <Navigate to="/courses" replace />;
-  if (userOnly && isAdmin) return <Navigate to="/admin-courses" replace />;
+  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/home" replace />;
+  if (adminOnly && !isAdmin && !isSuperAdmin) return <Navigate to="/courses" replace />;
+  if (userOnly && (isAdmin || isSuperAdmin)) return <Navigate to="/admin-courses" replace />;
 
   return children;
 };
@@ -160,6 +163,14 @@ function App() {
           <ProtectedRoute adminOnly={true}>
             <Layout>
               <AdminCargos />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin-aprobaciones" element={
+          <ProtectedRoute superAdminOnly={true}>
+            <Layout>
+              <AdminAprobaciones />
             </Layout>
           </ProtectedRoute>
         } />
