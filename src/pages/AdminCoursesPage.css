@@ -7,21 +7,21 @@ body {
   font-family: "Segoe UI", sans-serif;
 }
 
-.admin-page-container {
+.farmeo-admin-wrapper {
   padding: 2rem;
-  max-width: 1200px;
-  margin: 2rem auto;
+  max-width: 1400px;
+  margin: 0 auto;
   position: relative;
   z-index: 1;
+  min-height: 100vh;
 }
 
-.admin-main-container {
+.farmeo-admin-content {
   background-color: var(--bg-card);
   border-radius: var(--radius-large);
   box-shadow: var(--shadow-card);
   border: 1px solid var(--border-primary);
-  padding: 2rem;
-  min-height: calc(100vh - 4rem);
+  padding: 3rem;
   position: relative;
 }
 
@@ -90,11 +90,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  background: var(--bg-card-hover);
+  background: rgba(255, 255, 255, 0.01);
   padding: 2rem;
   border-radius: var(--radius-medium);
-  border: 1px solid var(--border-primary);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--border-secondary);
+  box-shadow: none;
 }
 
 .form-group {
@@ -205,75 +205,148 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
-/* Course Cards */
-.admin-course-card {
-  margin: 0 auto 2rem;
-  padding: 2rem;
-  border-radius: var(--radius-large);
+/* Course Grid and Compact Cards */
+.admin-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-course-card.compact {
+  margin: 0;
+  padding: 1.25rem;
+  border-radius: var(--radius-medium);
   background-color: var(--bg-card);
-  max-width: 900px;
-  box-shadow: var(--shadow-medium);
+  box-shadow: var(--shadow-small);
   border: 1px solid var(--border-primary);
-  transition: all 0.3s ease;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 480px;
+}
+
+.admin-course-card.compact:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-medium);
+  border-color: var(--text-success);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-course-card.compact h3 {
+  font-size: 1.1rem;
+  margin: 0;
+  line-height: 1.3;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.admin-course-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--text-info), var(--text-success));
+.role-tag {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  background: rgba(41, 98, 255, 0.1);
+  color: var(--text-info);
+  border-radius: 6px;
+  white-space: nowrap;
+  font-weight: 600;
+  border: 1px solid rgba(41, 98, 255, 0.2);
 }
 
-.admin-course-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-heavy);
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.admin-course-card h3 {
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.admin-course-card p {
+.course-desc-short {
+  font-size: 0.9rem;
   color: var(--text-secondary);
   margin-bottom: 1rem;
-  font-size: 1rem;
-  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
 }
 
-/* Badges for course info */
-.admin-course-card p:nth-of-type(2) {
-  background-color: var(--bg-card-hover);
-  padding: 1rem;
-  border-radius: var(--radius-medium);
-  border-left: 4px solid var(--text-info);
-  margin-bottom: 1.5rem;
+.course-meta-small {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.admin-course-card p:nth-of-type(3),
-.admin-course-card p:nth-of-type(4),
-.admin-course-card p:nth-of-type(5) {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 1rem;
-  background-color: rgba(16, 185, 129, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 600;
+.course-meta-small span {
+  font-size: 0.8rem;
   color: var(--text-success);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.05);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.video-container-mini {
+  width: 100%;
+  height: 180px;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+}
+
+.no-video-mini {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-warning);
+  font-size: 0.85rem;
+  font-style: italic;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.course-actions-mini {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-primary);
+}
+
+.course-actions-mini button {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+}
+
+.course-actions-mini button:first-child {
+  background: rgba(41, 98, 255, 0.1);
+  color: var(--text-info);
+}
+
+.course-actions-mini button:last-child {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.course-actions-mini button:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
 }
 
 /* --- Video Container --- */
@@ -503,8 +576,66 @@ body {
   }
 }
 
-/* Modals */
-.modal {
+/* Pagina de cursos - Buscador y Paginación */
+.course-search-bar input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.course-search-bar input:focus {
+  border-color: var(--text-success) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+  outline: none;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 3.5rem;
+  padding-bottom: 3rem;
+  flex-wrap: wrap;
+}
+
+.pagination-controls button {
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+}
+
+.pagination-controls button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-small);
+  border-color: var(--text-success);
+  color: var(--text-success);
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--bg-disabled);
+}
+
+.pagination-controls button.active {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 10px rgba(41, 98, 255, 0.3);
+}
+
+/* Modals - Renombrado para evitar conflictos globales */
+.farmeo-admin-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -515,10 +646,10 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 999;
+  z-index: 1000;
 }
 
-.modal-content {
+.farmeo-admin-modal-content {
   background-color: var(--bg-card);
   padding: 2.5rem;
   width: 90%;

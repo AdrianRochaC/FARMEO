@@ -23,6 +23,9 @@ const AdminCoursesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [showCourses, setShowCourses] = useState(false); // NUEVO
   const [videoFile, setVideoFile] = useState(null); // Nuevo estado para archivo
+  const [currentPage, setCurrentPage] = useState(1); // NUEVO: para paginación
+  const [itemsPerPage, setItemsPerPage] = useState(6); // NUEVO: elementos por página (6 para grid 3x2 o 2x3)
+  const [searchTerm, setSearchTerm] = useState(""); // NUEVO: para filtrar cursos
   const [useFile, setUseFile] = useState(false); // Nuevo estado para alternar entre link y archivo
   const [loading, setLoading] = useState(false); // Estado para IA
   const [submitting, setSubmitting] = useState(false); // Estado para submit del formulario
@@ -632,9 +635,23 @@ const AdminCoursesPage = () => {
     },
   ];
 
+  // --- Lógica de Paginación ---
+  const filteredCourses = courses.filter(course =>
+    course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (course.role && course.role.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCourses = filteredCourses.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
-    <div className="admin-page-container">
-      <div className="admin-main-container">
+    <div className="farmeo-admin-wrapper">
+      <div className="farmeo-admin-content">
         <h1>Panel Administrador {editingCourse ? "(Editando)" : ""}</h1>
         <div className="admin-subtitle">
           Gestión de cursos (crear, editar o eliminar cursos de capacitación y evaluación)
@@ -934,54 +951,159 @@ const AdminCoursesPage = () => {
         {
           showCourses && (
             <div className="admin-course-list">
-              {courses.map((course) => (
-                <div key={course.id} className="admin-course-card">
-                  <h3>{course.title}</h3>
-                  <p>{course.description}</p>
-                  <p>👥 Rol: {course.role}</p>
-                  <p>⏳ Tiempo límite: {course.timeLimit || course.time_limit} min</p>
-                  <p>🔁 Intentos: {course.attempts}</p>
+              <h2>Cursos Creados</h2>
 
-                  {/* Mostrar video según tipo en la lista de cursos */}
-                  <div className="video-container">
-                    {(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).trim() !== '' ? (
-                      (course.videoUrl || course.video_url).includes('youtube.com/embed/') ? (
-                        <iframe
-                          src={course.videoUrl || course.video_url}
-                          title={course.title}
-                          width="100%"
-                          height="315"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      ) : (
-                        <video
-                          src={(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).startsWith('http')
-                            ? (course.videoUrl || course.video_url)
-                            : `${BACKEND_URL}${course.videoUrl || course.video_url}`}
-                          controls
-                          width="100%"
-                          height="315"
-                          style={{ background: '#000' }}
-                        >
-                          Tu navegador no soporta la reproducción de video.
-                        </video>
-                      )
-                    ) : (
-                      <div className="no-video">
-                        <p>⚠️ No hay video disponible</p>
-                        <p>La URL del video está vacía en la base de datos</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="course-actions">
-                    <button onClick={() => handleEditCourse(course)}>✏️ Editar</button>
-                    <button onClick={() => handleDeleteCourse(course.id)}>🗑️ Eliminar</button>
-                  </div>
+              {/* Buscador y Selector de Cantidad */}
+              <div className="course-list-controls" style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '1.5rem',
+                flexWrap: 'wrap',
+                marginBottom: '2.5rem',
+                maxWidth: '900px',
+                margin: '0 auto 2.5rem'
+              }}>
+                <div className="course-search-bar" style={{ flex: 1, minWidth: '300px' }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar curso por título, descripción o cargo..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1); // Resetear a página 1 al buscar
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 20px',
+                      borderRadius: '30px',
+                      border: '1px solid var(--border-primary)',
+                      background: 'var(--bg-card)',
+                      color: 'var(--text-primary)',
+                      boxShadow: 'var(--shadow-small)'
+                    }}
+                  />
                 </div>
-              ))}
+
+                <div className="items-per-page-selector" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                  <label style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '500' }}>Mostrar:</label>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(parseInt(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      background: 'var(--bg-card)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-primary)',
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value={3}>3 cursos</option>
+                    <option value={6}>6 cursos</option>
+                    <option value={9}>9 cursos</option>
+                    <option value={12}>12 cursos</option>
+                  </select>
+                </div>
+              </div>
+
+              {currentCourses.length > 0 ? (
+                <>
+                  <div className="admin-courses-grid">
+                    {currentCourses.map((course) => (
+                      <div key={course.id} className="admin-course-card compact">
+                        <div className="card-header">
+                          <h3>{course.title}</h3>
+                          <span className="role-tag">{course.role}</span>
+                        </div>
+
+                        <div className="card-body">
+                          <p className="course-desc-short">{course.description}</p>
+
+                          <div className="course-meta-small">
+                            <span>⏳ {course.timeLimit || course.time_limit} min</span>
+                            <span>🔁 {course.attempts} intentos</span>
+                          </div>
+
+                          <div className="video-container-mini">
+                            {(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).trim() !== '' ? (
+                              (course.videoUrl || course.video_url).includes('youtube.com/embed/') ? (
+                                <iframe
+                                  src={course.videoUrl || course.video_url}
+                                  title={course.title}
+                                  width="100%"
+                                  height="180"
+                                  frameBorder="0"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                <video
+                                  src={(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).startsWith('http')
+                                    ? (course.videoUrl || course.video_url)
+                                    : `${BACKEND_URL}${course.videoUrl || course.video_url}`}
+                                  controls
+                                  width="100%"
+                                  height="180"
+                                  style={{ background: '#000' }}
+                                >
+                                  Tu navegador no soporta video.
+                                </video>
+                              )
+                            ) : (
+                              <div className="no-video-mini">
+                                <span>⚠️ Sin video</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="course-actions-mini">
+                          <button onClick={() => handleEditCourse(course)} title="Editar">✏️</button>
+                          <button onClick={() => handleDeleteCourse(course.id)} title="Eliminar">🗑️</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <div className="pagination-controls">
+                      <button
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </button>
+
+                      {[...Array(totalPages)].map((_, i) => (
+                        <button
+                          key={i + 1}
+                          onClick={() => paginate(i + 1)}
+                          className={currentPage === i + 1 ? 'active' : ''}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  No se encontraron cursos que coincidan con la búsqueda.
+                </div>
+              )}
             </div>
           )
         }
@@ -1025,8 +1147,8 @@ const AdminCoursesPage = () => {
             </div>
           )
         }
-      </div >
-    </div >
+      </div>
+    </div>
   );
 };
 
