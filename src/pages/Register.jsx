@@ -12,6 +12,10 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [cargos, setCargos] = useState([]);
   const [selectedCargoId, setSelectedCargoId] = useState("");
+  const [admins, setAdmins] = useState([]);
+  const [selectedAdminId, setSelectedAdminId] = useState("");
+  const [organizaciones, setOrganizaciones] = useState([]);
+  const [selectedOrganizacionId, setSelectedOrganizacionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
@@ -22,6 +26,8 @@ const Register = () => {
 
   useEffect(() => {
     fetchCargos();
+    fetchAdmins();
+    fetchOrganizaciones();
   }, []);
 
   // Validar contraseña en tiempo real
@@ -47,10 +53,40 @@ const Register = () => {
         if (data.cargos.length > 0) {
           setSelectedCargoId(data.cargos[0].id);
         }
-      } else {
-        }
+      }
     } catch (error) {
-      } finally {
+      console.error('Error cargando cargos');
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/users/admins`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins || []);
+        if (data.admins && data.admins.length > 0) {
+          setSelectedAdminId(data.admins[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando admins');
+    }
+  };
+
+  const fetchOrganizaciones = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/organizaciones`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizaciones(data.organizaciones || []);
+        if (data.organizaciones && data.organizaciones.length > 0) {
+          setSelectedOrganizacionId(data.organizaciones[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando organizaciones');
+    } finally {
       setLoading(false);
     }
   };
@@ -112,7 +148,9 @@ const Register = () => {
           nombre: name,
           email: email, 
           password: password, 
-          cargo_id: parseInt(selectedCargoId)
+          cargo_id: parseInt(selectedCargoId),
+          admin_asignado_id: selectedAdminId ? parseInt(selectedAdminId) : null,
+          organizacion_id: selectedOrganizacionId ? parseInt(selectedOrganizacionId) : null
         })
       });
 
@@ -252,6 +290,51 @@ const Register = () => {
             ))}
           </select>
         </div>
+
+        {organizaciones.length > 0 && (
+          <div className="form-group">
+            <label htmlFor="organizacion">
+              <span className="label-icon">🏛️</span>
+              Organización (Opcional)
+            </label>
+            <select 
+              id="organizacion"
+              value={selectedOrganizacionId} 
+              onChange={(e) => setSelectedOrganizacionId(e.target.value)}
+            >
+              <option value="">Sin organización</option>
+              {organizaciones.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {admins.length > 0 && (
+          <div className="form-group">
+            <label htmlFor="admin">
+              <span className="label-icon">👔</span>
+              Admin Asignado (Opcional)
+            </label>
+            <select 
+              id="admin"
+              value={selectedAdminId} 
+              onChange={(e) => setSelectedAdminId(e.target.value)}
+            >
+              <option value="">Sin admin asignado</option>
+              {admins.map((admin) => (
+                <option key={admin.id} value={admin.id}>
+                  {admin.nombre} ({admin.email})
+                </option>
+              ))}
+            </select>
+            <small style={{ display: 'block', marginTop: '0.5rem', color: '#999' }}>
+              Si eres empleado, selecciona el Admin que te gestionará
+            </small>
+          </div>
+        )}
 
         <button type="submit" className="btn-primary">
           <span className="btn-icon">✨</span>

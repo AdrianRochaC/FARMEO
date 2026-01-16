@@ -29,7 +29,7 @@
   position: relative;
 }
 
-.modal-header {
+.personalization-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -71,7 +71,7 @@
   transform: scale(1.1);
 }
 
-.modal-content {
+.personalization-content {
   padding: 2rem;
 }
 
@@ -94,8 +94,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-message {
@@ -230,8 +235,13 @@
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
+  }
 }
 
 /* Opciones de esquema de color */
@@ -285,29 +295,77 @@
   border: 1px solid var(--border-secondary);
 }
 
-.scheme-default .color-primary { background: var(--text-primary); }
-.scheme-default .color-secondary { background: var(--text-secondary); }
-.scheme-default .color-accent { background: var(--text-accent); }
+.scheme-default .color-primary {
+  background: var(--text-primary);
+}
 
-.scheme-monochrome .color-primary { background: #374151; }
-.scheme-monochrome .color-secondary { background: #6b7280; }
-.scheme-monochrome .color-accent { background: #9ca3af; }
+.scheme-default .color-secondary {
+  background: var(--text-secondary);
+}
 
-.scheme-vibrant .color-primary { background: #dc2626; }
-.scheme-vibrant .color-secondary { background: #ea580c; }
-.scheme-vibrant .color-accent { background: #ca8a04; }
+.scheme-default .color-accent {
+  background: var(--text-accent);
+}
 
-.scheme-pastel .color-primary { background: #fecaca; }
-.scheme-pastel .color-secondary { background: #fed7aa; }
-.scheme-pastel .color-accent { background: #fef3c7; }
+.scheme-monochrome .color-primary {
+  background: #374151;
+}
 
-.scheme-neon .color-primary { background: #06b6d4; }
-.scheme-neon .color-secondary { background: #8b5cf6; }
-.scheme-neon .color-accent { background: #ec4899; }
+.scheme-monochrome .color-secondary {
+  background: #6b7280;
+}
 
-.scheme-earth .color-primary { background: #78350f; }
-.scheme-earth .color-secondary { background: #92400e; }
-.scheme-earth .color-accent { background: #a16207; }
+.scheme-monochrome .color-accent {
+  background: #9ca3af;
+}
+
+.scheme-vibrant .color-primary {
+  background: #dc2626;
+}
+
+.scheme-vibrant .color-secondary {
+  background: #ea580c;
+}
+
+.scheme-vibrant .color-accent {
+  background: #ca8a04;
+}
+
+.scheme-pastel .color-primary {
+  background: #fecaca;
+}
+
+.scheme-pastel .color-secondary {
+  background: #fed7aa;
+}
+
+.scheme-pastel .color-accent {
+  background: #fef3c7;
+}
+
+.scheme-neon .color-primary {
+  background: #06b6d4;
+}
+
+.scheme-neon .color-secondary {
+  background: #8b5cf6;
+}
+
+.scheme-neon .color-accent {
+  background: #ec4899;
+}
+
+.scheme-earth .color-primary {
+  background: #78350f;
+}
+
+.scheme-earth .color-secondary {
+  background: #92400e;
+}
+
+.scheme-earth .color-accent {
+  background: #a16207;
+}
 
 .color-scheme-info h4 {
   font-size: 0.95rem;
@@ -387,7 +445,7 @@
   margin: 0;
 }
 
-.radio-option input[type="radio"]:checked + .radio-content {
+.radio-option input[type="radio"]:checked+.radio-content {
   color: var(--text-success);
 }
 
@@ -1035,8 +1093,13 @@
 
 /* Animaciones */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideIn {
@@ -1044,6 +1107,7 @@
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1056,19 +1120,19 @@
     width: 95%;
     max-height: 95vh;
   }
-  
+
   .modal-header {
     padding: 1rem 1.5rem;
   }
-  
+
   .modal-content {
     padding: 1.5rem;
   }
-  
+
   .modal-footer {
     padding: 1rem 1.5rem;
   }
-  
+
   .theme-options,
   .color-scheme-options,
   .background-type-options,
@@ -1079,11 +1143,11 @@
   .animation-options {
     grid-template-columns: 1fr;
   }
-  
+
   .image-url-input {
     flex-direction: column;
   }
-  
+
   .btn-apply-image {
     justify-content: center;
   }
@@ -1094,26 +1158,24 @@
     width: 98%;
     max-height: 98vh;
   }
-  
+
   .modal-header {
     padding: 0.8rem 1rem;
   }
-  
+
   .modal-content {
     padding: 1rem;
   }
-  
+
   .modal-footer {
     padding: 0.8rem 1rem;
   }
-  
+
   .header-content h2 {
     font-size: 1.3rem;
   }
-  
+
   .section h3 {
     font-size: 1.1rem;
   }
 }
-
- 

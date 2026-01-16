@@ -37,7 +37,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
     document.documentElement.setAttribute('data-font-family', family);
     document.documentElement.setAttribute('data-spacing', space);
     document.documentElement.setAttribute('data-animations', anim);
-    
+
     // Aplicar fondo
     if (bgType === 'image' && bgImage) {
       document.documentElement.style.setProperty('--background-image', `url(${bgImage})`);
@@ -92,7 +92,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       setIsLoading(true);
       setError(null);
       const preferences = await getUserPreferences();
-      
+
       setCurrentTheme(preferences.theme);
       setSelectedTheme(preferences.theme);
       setColorScheme(preferences.color_scheme);
@@ -102,7 +102,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       setAnimations(preferences.animations);
       setBackgroundType(preferences.background_type);
       setBackgroundColor(preferences.background_color);
-      
+
       if (preferences.has_background_image && preferences.background_type === 'image') {
         try {
           const token = localStorage.getItem('authToken');
@@ -152,7 +152,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
   const handleThemeChange = async (theme) => {
     setSelectedTheme(theme);
     setCurrentTheme(theme);
-    
+
     const newPreferences = {
       theme,
       color_scheme: colorScheme,
@@ -164,14 +164,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     applySettings(theme, colorScheme, fontSize, fontFamily, spacing, animations, backgroundType, backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleColorSchemeChange = async (scheme) => {
     setColorScheme(scheme);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: scheme,
@@ -183,14 +183,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     applySettings(selectedTheme, scheme, fontSize, fontFamily, spacing, animations, backgroundType, backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleFontSizeChange = async (size) => {
     setFontSize(size);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: colorScheme,
@@ -202,14 +202,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     applySettings(selectedTheme, colorScheme, size, fontFamily, spacing, animations, backgroundType, backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleFontFamilyChange = async (family) => {
     setFontFamily(family);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: colorScheme,
@@ -221,14 +221,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     applySettings(selectedTheme, colorScheme, fontSize, family, spacing, animations, backgroundType, backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleSpacingChange = async (space) => {
     setSpacing(space);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: colorScheme,
@@ -240,14 +240,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     applySettings(selectedTheme, colorScheme, fontSize, fontFamily, space, animations, backgroundType, backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleAnimationsChange = async (anim) => {
     setAnimations(anim);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: colorScheme,
@@ -259,14 +259,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     applySettings(selectedTheme, colorScheme, fontSize, fontFamily, spacing, anim, backgroundType, backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleBackgroundTypeChange = async (type) => {
     setBackgroundType(type);
-    
+
     // Si se selecciona color, limpiar la imagen
     const newPreferences = {
       theme: selectedTheme,
@@ -279,12 +279,12 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: type === 'color' ? '' : backgroundImageUrl,
       background_color: backgroundColor
     };
-    
+
     // Limpiar la imagen localmente si se selecciona color
     if (type === 'color') {
       setBackgroundImageUrl('');
     }
-    
+
     applySettings(selectedTheme, colorScheme, fontSize, fontFamily, spacing, animations, type, type === 'color' ? '' : backgroundImageUrl, backgroundColor);
     await savePreferences(newPreferences);
   };
@@ -294,7 +294,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
     if (url && url.startsWith('data:')) {
       const base64Size = Math.ceil((url.length * 3) / 4);
       const maxApiSize = 8 * 1024 * 1024; // 8MB máximo para API
-      
+
       if (base64Size > maxApiSize) {
         setError('La imagen es demasiado grande para guardar en el servidor. Se aplicará temporalmente.');
         // Aplicar la imagen temporalmente sin guardar en servidor
@@ -303,9 +303,9 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
         return;
       }
     }
-    
+
     setBackgroundImageUrl(url);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: colorScheme,
@@ -317,14 +317,14 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: url,
       background_color: backgroundColor
     };
-    
+
     applySettings(selectedTheme, colorScheme, fontSize, fontFamily, spacing, animations, 'image', url, backgroundColor);
     await savePreferences(newPreferences);
   };
 
   const handleBackgroundColorChange = async (color) => {
     setBackgroundColor(color);
-    
+
     const newPreferences = {
       theme: selectedTheme,
       color_scheme: colorScheme,
@@ -336,10 +336,10 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
       background_image_url: '', // Limpiar imagen cuando se selecciona color
       background_color: color
     };
-    
+
     // Limpiar la imagen localmente
     setBackgroundImageUrl('');
-    
+
     applySettings(selectedTheme, colorScheme, fontSize, fontFamily, spacing, animations, 'color', '', color);
     await savePreferences(newPreferences);
   };
@@ -612,7 +612,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
   return (
     <div className="personalization-overlay" onClick={onClose}>
       <div className="personalization-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+        <div className="personalization-header">
           <div className="header-content">
             <Palette size={24} />
             <h2>Personalización</h2>
@@ -622,7 +622,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="modal-content">
+        <div className="personalization-content">
           {isLoading && (
             <div className="loading-indicator">
               <div className="spinner"></div>
@@ -640,7 +640,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                 <div className="info-text">
                   <span>Modo local</span>
                   <small>
-                    No estás autenticado. Los cambios se guardarán solo en este dispositivo. 
+                    No estás autenticado. Los cambios se guardarán solo en este dispositivo.
                     Inicia sesión para sincronizar tus preferencias entre dispositivos.
                   </small>
                 </div>
@@ -664,7 +664,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                 <div className="info-text">
                   <span>Almacenamiento optimizado</span>
                   <small>
-                    El almacenamiento local estaba lleno y se ha limpiado automáticamente. 
+                    El almacenamiento local estaba lleno y se ha limpiado automáticamente.
                     Las imágenes de fondo se guardarán solo temporalmente.
                   </small>
                 </div>
@@ -778,7 +778,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                 </div>
               </label>
             </div>
-            
+
             <div className="background-type-option">
               <label className="radio-option">
                 <input
@@ -810,8 +810,8 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                     className={`color-option ${backgroundColor === color.id ? 'selected' : ''}`}
                     onClick={() => handleBackgroundColorChange(color.id)}
                   >
-                    <div 
-                      className="color-preview" 
+                    <div
+                      className="color-preview"
                       style={{ backgroundColor: color.color }}
                     ></div>
                     <div className="color-info">
@@ -832,18 +832,18 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
           {backgroundType === 'image' && (
             <div className="background-image-options">
               <h4>Imagen de fondo</h4>
-              
+
               {/* Opciones de imagen */}
               <div className="image-options">
                 <div className="image-option-tabs">
-                  <button 
+                  <button
                     className={`tab-button ${!backgroundImageUrl.startsWith('data:') ? 'active' : ''}`}
                     onClick={() => setBackgroundImageUrl('')}
                   >
                     <Upload size={16} />
                     URL
                   </button>
-                  <button 
+                  <button
                     className={`tab-button ${backgroundImageUrl.startsWith('data:') ? 'active' : ''}`}
                     onClick={openFileSelector}
                   >
@@ -862,7 +862,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                     onBlur={() => handleBackgroundImageChange(backgroundImageUrl)}
                     disabled={backgroundImageUrl.startsWith('data:')}
                   />
-                  <button 
+                  <button
                     className="btn-apply-image"
                     onClick={() => handleBackgroundImageChange(backgroundImageUrl)}
                     disabled={backgroundImageUrl.startsWith('data:')}
@@ -881,7 +881,7 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                     onChange={handleFileUpload}
                     style={{ display: 'none' }}
                   />
-                  <button 
+                  <button
                     className="btn-upload-file"
                     onClick={openFileSelector}
                     disabled={uploadingImage}
@@ -903,9 +903,9 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
                 {/* Vista previa */}
                 {backgroundImageUrl && (
                   <div className="image-preview">
-                    <img 
-                      src={backgroundImageUrl} 
-                      alt="Vista previa" 
+                    <img
+                      src={backgroundImageUrl}
+                      alt="Vista previa"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextSibling.style.display = 'block';
@@ -1085,12 +1085,12 @@ const PersonalizationModal = ({ isOpen, onClose }) => {
               <div className="info-text">
                 <span>Configuración actual:</span>
                 <small>
-                  {currentTheme === 'light' ? 'Claro' : 'Oscuro'} • 
-                  {colorSchemes.find(c => c.id === colorScheme)?.name || 'Predeterminado'} • 
-                  {fontSize === 'small' ? ' Pequeña' : fontSize === 'large' ? ' Grande' : ' Normal'} • 
-                  {fontFamilies.find(f => f.id === fontFamily)?.name || 'Inter'} • 
-                  {spacing === 'compact' ? ' Compacto' : spacing === 'comfortable' ? ' Cómodo' : ' Normal'} • 
-                  {animations === 'enabled' ? ' Animaciones' : animations === 'reduced' ? ' Reducidas' : ' Sin animaciones'} • 
+                  {currentTheme === 'light' ? 'Claro' : 'Oscuro'} •
+                  {colorSchemes.find(c => c.id === colorScheme)?.name || 'Predeterminado'} •
+                  {fontSize === 'small' ? ' Pequeña' : fontSize === 'large' ? ' Grande' : ' Normal'} •
+                  {fontFamilies.find(f => f.id === fontFamily)?.name || 'Inter'} •
+                  {spacing === 'compact' ? ' Compacto' : spacing === 'comfortable' ? ' Cómodo' : ' Normal'} •
+                  {animations === 'enabled' ? ' Animaciones' : animations === 'reduced' ? ' Reducidas' : ' Sin animaciones'} •
                   {backgroundType === 'image' ? ' Imagen de fondo' : ' Color de fondo'}
                 </small>
               </div>

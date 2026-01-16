@@ -57,6 +57,32 @@
   box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4), 0 3px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Estilos específicos para SUPERADMIN */
+.role-badge.superadmin {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(185, 28, 28, 0.2));
+  border: 1px solid rgba(220, 38, 38, 0.6);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.role-badge.superadmin .role-text {
+  color: #ef4444;
+  /* Rojo brillante */
+  text-shadow: 0 0 10px rgba(220, 38, 38, 0.7);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-badge.superadmin .role-icon {
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.8));
+}
+
+.role-badge.superadmin:hover {
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5), 0 3px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(220, 38, 38, 0.8);
+}
+
 /* Estilos específicos para EMPLEADO */
 .role-badge.employee {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2));
@@ -88,11 +114,11 @@
     gap: 4px;
     font-size: 11px;
   }
-  
+
   .role-icon {
     font-size: 14px;
   }
-  
+
   .role-text {
     font-size: 10px;
   }

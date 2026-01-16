@@ -4,6 +4,14 @@ import { useNavigate } from "react-router-dom";
 import "./Cuentas.css";
 import { BACKEND_URL } from '../utils/api';
 
+const cleanRoleName = (role) => {
+  if (!role) return 'Sin rol';
+  let r = role;
+  if (r.startsWith('["') && r.endsWith('"]')) r = r.slice(2, -2);
+  else if (r.startsWith('[') && r.endsWith(']')) r = r.slice(1, -1);
+  return r.replace(/"/g, '');
+};
+
 const Cuentas = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,8 +27,12 @@ const Cuentas = () => {
     nombre: "",
     email: "",
     rol: "",
-    activo: true
+    activo: true,
+    admin_asignado_id: null,
+    organizacion_id: null
   });
+  const [admins, setAdmins] = useState([]);
+  const [organizaciones, setOrganizaciones] = useState([]);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -34,7 +46,33 @@ const Cuentas = () => {
 
   useEffect(() => {
     loadUsers();
+    loadAdmins();
+    loadOrganizaciones();
   }, []);
+
+  const loadAdmins = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/users/admins`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins || []);
+      }
+    } catch (error) {
+      console.error('Error cargando admins:', error);
+    }
+  };
+
+  const loadOrganizaciones = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/organizaciones`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizaciones(data.organizaciones || []);
+      }
+    } catch (error) {
+      console.error('Error cargando organizaciones:', error);
+    }
+  };
 
   // Validar contraseña en tiempo real
   useEffect(() => {
@@ -108,7 +146,9 @@ const Cuentas = () => {
       nombre: user.nombre,
       email: user.email,
       rol: user.rol,
-      activo: user.activo
+      activo: user.activo,
+      admin_asignado_id: user.admin_asignado_id || null,
+      organizacion_id: user.organizacion_id || null
     });
     setIsEditing(false);
   };
@@ -134,7 +174,9 @@ const Cuentas = () => {
         nombre: selectedUser.nombre,
         email: selectedUser.email,
         rol: selectedUser.rol,
-        activo: selectedUser.activo
+        activo: selectedUser.activo,
+        admin_asignado_id: selectedUser.admin_asignado_id || null,
+        organizacion_id: selectedUser.organizacion_id || null
       });
     }
   };
@@ -195,7 +237,7 @@ const Cuentas = () => {
       alert("❌ La contraseña no cumple con todos los requisitos");
       return;
     }
-    
+
     if (newPassword.length > 50) {
       alert("❌ La contraseña no puede tener más de 50 caracteres");
       return;
@@ -245,13 +287,13 @@ const Cuentas = () => {
   const handleToggleUserStatus = async (userId, currentStatus) => {
     // Buscar el usuario en la lista
     const user = users.find(u => u.id === userId);
-    
+
     // Prevenir desactivar la cuenta de Admin del Sistema
     if (user && (user.email === 'admin@proyecto.com' || user.nombre === 'Admin del Sistema')) {
       alert('⚠️ No se puede desactivar la cuenta de administrador del sistema.');
       return;
     }
-    
+
     setSaving(true);
     try {
       const token = getAuthToken();
@@ -312,31 +354,76 @@ const Cuentas = () => {
 
   if (error) {
     return (
-      <div className="cuentas-container">
-        <div className="error-message">
-          <h2>❌ Error</h2>
-          <p>{error}</p>
-          <button className="btn btn-primary" onClick={loadUsers}>
-            🔄 Reintentar
-          </button>
+      <div className="admin-page-container">
+        <div className="admin-main-container">
+          <h1>Gestión de Cuentas</h1>
+          <div className="admin-subtitle">Administra usuarios, asigna roles y gestiona permisos de acceso</div>
+
+          <div className="cuentas-stats" style={{ marginBottom: '2rem', justifyContent: 'center' }}>
+            <div className="stat-card">
+              <div className="stat-number">{users.length}</div>
+              <div className="stat-label">Total Usuarios</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">{users.filter(u => u.activo).length}</div>
+              <div className="stat-label">Activos</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-number">{users.filter(u => !u.activo).length}</div>
+              <div className="stat-label">Inactivos</div>
+            </div>
+          </div>
+
+          <div className="separator-line"></div>
+
+          <div className="cuentas-actions" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+            <button className="btn btn-primary" onClick={() => navigate("/register")}>
+              + Crear nueva cuenta
+            </button>
+          </div>
+
+          <div className="cuentas-filters" style={{ background: 'var(--bg-card-hover)', padding: '1rem', borderRadius: 'var(--radius-medium)', border: '1px solid var(--border-primary)' }}>
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="🔍 Buscar por nombre o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="role-filter">
+              <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+                {roles.map(role => (
+                  <option key={role} value={role}>{cleanRoleName(role)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="cuentas-actions">
+            <button className="btn btn-outline" onClick={loadUsers} disabled={loading}>
+              {loading ? '⏳ Cargando...' : '🔄 Actualizar'}
+            </button>
+          </div>
+          <div className="error-message">
+            <h2>❌ Error</h2>
+            <p>{error}</p>
+            <button className="btn btn-primary" onClick={loadUsers}>
+              🔄 Reintentar
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="cuentas-container">
-      <div className="cuentas-header">
-        <h1>👥 Gestión de Cuentas</h1>
+    <div className="admin-page-container">
+      <div className="admin-main-container">
+        <h1>Gestión de Cuentas</h1>
+        <div className="admin-subtitle">Administra usuarios, asigna roles y gestiona permisos de acceso</div>
 
-        {/* 🟢 Botón para crear nueva cuenta */}
-        <div className="crear-cuenta-btn" style={{ margin: "10px 0" }}>
-          <button className="btn btn-success" onClick={() => navigate("/register")}>
-            ➕ Crear nueva cuenta
-          </button>
-        </div>
-
-        <div className="cuentas-stats">
+        <div className="cuentas-stats" style={{ marginBottom: '2rem', justifyContent: 'center' }}>
           <div className="stat-card">
             <span className="stat-number">{users.length}</span>
             <span className="stat-label">Total Usuarios</span>
@@ -350,270 +437,305 @@ const Cuentas = () => {
             <span className="stat-label">Inactivos</span>
           </div>
         </div>
-      </div>
 
-      {/* Botón para refrescar */}
-      <div className="cuentas-actions">
-        <button className="btn btn-outline" onClick={loadUsers} disabled={loading}>
-          {loading ? '⏳ Cargando...' : '🔄 Actualizar'}
-        </button>
-      </div>
+        <div className="separator-line"></div>
 
-      {/* Filtros */}
-      <div className="cuentas-filters">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="🔍 Buscar por nombre o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="cuentas-actions" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+          <button className="btn btn-primary" onClick={() => navigate("/register")}>
+            + Crear nueva cuenta
+          </button>
         </div>
-        <div className="role-filter">
-          <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-            {roles.map(role => (
-              <option key={role} value={role}>{role}</option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      {/* Lista de usuarios */}
-      <div className="usuarios-grid">
-        {filteredUsers.map(user => (
-          <div 
-            key={user.id} 
-            className={`usuario-card ${!user.activo ? 'inactive' : ''}`}
-            onClick={() => handleUserClick(user)}
-          >
-            <div className="usuario-avatar">
-              {user.nombre.charAt(0).toUpperCase()}
-            </div>
-            <div className="usuario-info">
-              <h3>{user.nombre}</h3>
-              <p className="usuario-email">{user.email}</p>
-              <span className={`usuario-rol rol-${user.rol ? user.rol.toLowerCase().replace(/\s+/g, '-') : 'sin-rol'}`}>
-                {user.rol || 'Sin rol'}
-              </span>
-            </div>
-            <div className="usuario-status">
-              {user.activo ? (
-                <span className="status-active">✅ Activo</span>
-              ) : (
-                <span className="status-inactive">❌ Inactivo</span>
-              )}
-            </div>
+        {/* Filtros */}
+        <div className="cuentas-filters">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="🔍 Buscar por nombre o email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        ))}
-      </div>
-
-      {filteredUsers.length === 0 && users.length > 0 && (
-        <div className="no-results">
-          <p>No se encontraron usuarios que coincidan con los filtros.</p>
-        </div>
-      )}
-
-      {users.length === 0 && !loading && !error && (
-        <div className="no-users">
-          <h2>📝 No hay usuarios registrados</h2>
-          <p>Aún no se han registrado usuarios en el sistema.</p>
-        </div>
-      )}
-
-      {/* Modal de detalles del usuario */}
-      {selectedUser && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>👤 {selectedUser.nombre}</h2>
-              <button className="modal-close" onClick={handleCloseModal}>❌</button>
-            </div>
-
-            <div className="modal-body">
-              {!isEditing ? (
-                // Vista de solo lectura
-                <div className="usuario-details">
-                  <div className="detail-row">
-                    <span className="detail-label">Nombre:</span>
-                    <span className="detail-value">{selectedUser.nombre}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Email:</span>
-                    <span className="detail-value">{selectedUser.email}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Rol:</span>
-                    <span className={`detail-value rol-badge rol-${selectedUser.rol ? selectedUser.rol.toLowerCase().replace(/\s+/g, '-') : 'sin-rol'}`}>
-                      {selectedUser.rol || 'Sin rol'}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Estado:</span>
-                    <span className={`detail-value ${selectedUser.activo ? 'status-active' : 'status-inactive'}`}>
-                      {selectedUser.activo ? '✅ Activo' : '❌ Inactivo'}
-                    </span>
-                  </div>
-                  {selectedUser.fecha_creacion && (
-                    <div className="detail-row">
-                      <span className="detail-label">Fecha de registro:</span>
-                      <span className="detail-value">{selectedUser.fecha_creacion}</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Vista de edición
-                <form onSubmit={handleSaveUser} className="edit-form">
-                  <div className="form-group">
-                    <label>Nombre</label>
-                    <input
-                      type="text"
-                      value={editData.nombre}
-                      onChange={(e) => handleInputChange('nombre', e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      value={editData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Rol</label>
-                    <select 
-                      value={editData.rol} 
-                      onChange={(e) => handleInputChange('rol', e.target.value)}
-                    >
-                      {uniqueRoles.map(role => (
-                        <option key={role} value={role}>{role}</option>
-                      ))}
-                      <option value="Admin">Administrador</option>
-                      <option value="Gerente">Gerente</option>
-                      <option value="Contabilidad">Contabilidad</option>
-                      <option value="Compras">Compras</option>
-                      <option value="Atencion al Cliente">Atención al Cliente</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={editData.activo}
-                        onChange={(e) => handleInputChange('activo', e.target.checked)}
-                      />
-                      <span>Usuario activo</span>
-                    </label>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            <div className="modal-actions">
-              {!isEditing ? (
-                <>
-                  <button className="btn btn-primary" onClick={handleEditToggle}>
-                    ✏️ Editar
-                  </button>
-                  <button className="btn btn-outline" onClick={() => setShowPasswordModal(true)}>
-                    🔐 Cambiar Contraseña
-                  </button>
-                  <button 
-                    className={`btn ${selectedUser.activo ? 'btn-warning' : 'btn-success'}`}
-                    onClick={() => handleToggleUserStatus(selectedUser.id, selectedUser.activo)}
-                    disabled={saving || selectedUser.email === 'admin@proyecto.com' || selectedUser.nombre === 'Admin del Sistema'}
-                    title={selectedUser.email === 'admin@proyecto.com' || selectedUser.nombre === 'Admin del Sistema' ? 'No se puede desactivar la cuenta de administrador del sistema' : ''}
-                  >
-                    {selectedUser.activo ? '⏸️ Desactivar' : '▶️ Activar'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button type="submit" className="btn btn-primary" onClick={handleSaveUser} disabled={saving}>
-                    {saving ? '⏳ Guardando...' : '💾 Guardar'}
-                  </button>
-                  <button className="btn btn-secondary" onClick={handleEditToggle}>
-                    ❌ Cancelar
-                  </button>
-                </>
-              )}
-            </div>
+          <div className="role-filter">
+            <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+              {roles.map(role => (
+                <option key={role} value={role}>{cleanRoleName(role)}</option>
+              ))}
+            </select>
           </div>
         </div>
-      )}
 
-      {/* Modal de cambio de contraseña */}
-      {showPasswordModal && (
-        <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="modal-content small-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>🔐 Cambiar Contraseña</h3>
-              <button className="modal-close" onClick={() => setShowPasswordModal(false)}>❌</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Nueva Contraseña para {selectedUser.nombre}</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres, mayúscula, minúscula y número"
-                  minLength="8"
-                />
-                
-                {/* Indicadores de validación de contraseña */}
-                {newPassword && (
-                  <div className="password-validation">
-                    <div className={`validation-item ${passwordValidation.length ? 'valid' : 'invalid'}`}>
-                      <span className="validation-icon">
-                        {passwordValidation.length ? '✅' : '❌'}
-                      </span>
-                      Mínimo 8 caracteres
-                    </div>
-                    <div className={`validation-item ${passwordValidation.uppercase ? 'valid' : 'invalid'}`}>
-                      <span className="validation-icon">
-                        {passwordValidation.uppercase ? '✅' : '❌'}
-                      </span>
-                      Al menos una mayúscula
-                    </div>
-                    <div className={`validation-item ${passwordValidation.lowercase ? 'valid' : 'invalid'}`}>
-                      <span className="validation-icon">
-                        {passwordValidation.lowercase ? '✅' : '❌'}
-                      </span>
-                      Al menos una minúscula
-                    </div>
-                    <div className={`validation-item ${passwordValidation.number ? 'valid' : 'invalid'}`}>
-                      <span className="validation-icon">
-                        {passwordValidation.number ? '✅' : '❌'}
-                      </span>
-                      Al menos un número
-                    </div>
-                    <div className={`validation-item ${passwordValidation.noSpaces ? 'valid' : 'invalid'}`}>
-                      <span className="validation-icon">
-                        {passwordValidation.noSpaces ? '✅' : '❌'}
-                      </span>
-                      Sin espacios
-                    </div>
-                  </div>
+        {/* Lista de usuarios */}
+        <div className="usuarios-grid">
+          {filteredUsers.map(user => (
+            <div
+              key={user.id}
+              className={`usuario-card ${!user.activo ? 'inactive' : ''}`}
+              onClick={() => handleUserClick(user)}
+            >
+              <div className="usuario-avatar">
+                {user.nombre.charAt(0).toUpperCase()}
+              </div>
+              <div className="usuario-info">
+                <h3>{user.nombre}</h3>
+                <p className="usuario-email">{user.email}</p>
+                <span className={`usuario-rol rol-${user.rol ? cleanRoleName(user.rol).toLowerCase().replace(/\s+/g, '-') : 'sin-rol'}`}>
+                  {cleanRoleName(user.rol)}
+                </span>
+              </div>
+              <div className="usuario-status">
+                {user.activo ? (
+                  <span className="status-active">✅ Activo</span>
+                ) : (
+                  <span className="status-inactive">❌ Inactivo</span>
                 )}
               </div>
             </div>
-            <div className="modal-actions">
-              <button className="btn btn-primary" onClick={handleResetPassword} disabled={saving}>
-                {saving ? '⏳ Actualizando...' : '🔐 Actualizar Contraseña'}
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>
-                ❌ Cancelar
-              </button>
+          ))}
+        </div>
+
+        {filteredUsers.length === 0 && users.length > 0 && (
+          <div className="no-results">
+            <p>No se encontraron usuarios que coincidan con los filtros.</p>
+          </div>
+        )}
+
+        {users.length === 0 && !loading && !error && (
+          <div className="no-users">
+            <h2>📝 No hay usuarios registrados</h2>
+            <p>Aún no se han registrado usuarios en el sistema.</p>
+          </div>
+        )}
+
+        {/* Modal de detalles del usuario */}
+        {selectedUser && (
+          <div className="modal-overlay" onClick={handleCloseModal}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>👤 {selectedUser.nombre}</h2>
+                <button className="modal-close" onClick={handleCloseModal}>❌</button>
+              </div>
+
+              <div className="modal-body">
+                {!isEditing ? (
+                  // Vista de solo lectura
+                  <div className="usuario-details">
+                    <div className="detail-row">
+                      <span className="detail-label">Nombre:</span>
+                      <span className="detail-value">{selectedUser.nombre}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Email:</span>
+                      <span className="detail-value">{selectedUser.email}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Rol:</span>
+                      <span className={`detail-value rol-badge rol-${selectedUser.rol ? cleanRoleName(selectedUser.rol).toLowerCase().replace(/\s+/g, '-') : 'sin-rol'}`}>
+                        {cleanRoleName(selectedUser.rol)}
+                      </span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Estado:</span>
+                      <span className={`detail-value ${selectedUser.activo ? 'status-active' : 'status-inactive'}`}>
+                        {selectedUser.activo ? '✅ Activo' : '❌ Inactivo'}
+                      </span>
+                    </div>
+                    {selectedUser.fecha_creacion && (
+                      <div className="detail-row">
+                        <span className="detail-label">Fecha de registro:</span>
+                        <span className="detail-value">{selectedUser.fecha_creacion}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Vista de edición
+                  <form onSubmit={handleSaveUser} className="edit-form">
+                    <div className="form-group">
+                      <label>Nombre</label>
+                      <input
+                        type="text"
+                        value={editData.nombre}
+                        onChange={(e) => handleInputChange('nombre', e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Email</label>
+                      <input
+                        type="email"
+                        value={editData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Rol</label>
+                      <select
+                        value={editData.rol}
+                        onChange={(e) => handleInputChange('rol', e.target.value)}
+                      >
+                        {uniqueRoles.map(role => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                        <option value="Admin">Administrador</option>
+                        <option value="Gerente">Gerente</option>
+                        <option value="Contabilidad">Contabilidad</option>
+                        <option value="Compras">Compras</option>
+                        <option value="Atencion al Cliente">Atención al Cliente</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={editData.activo}
+                          onChange={(e) => handleInputChange('activo', e.target.checked)}
+                        />
+                        <span>Usuario activo</span>
+                      </label>
+                    </div>
+
+                    {admins.length > 0 && (
+                      <div className="form-group">
+                        <label>Admin Asignado</label>
+                        <select
+                          value={editData.admin_asignado_id || ''}
+                          onChange={(e) => handleInputChange('admin_asignado_id', e.target.value || null)}
+                        >
+                          <option value="">Sin admin asignado</option>
+                          {admins.map(admin => (
+                            <option key={admin.id} value={admin.id}>
+                              {admin.nombre} ({admin.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {organizaciones.length > 0 && (
+                      <div className="form-group">
+                        <label>Organización</label>
+                        <select
+                          value={editData.organizacion_id || ''}
+                          onChange={(e) => handleInputChange('organizacion_id', e.target.value || null)}
+                        >
+                          <option value="">Sin organización</option>
+                          {organizaciones.map(org => (
+                            <option key={org.id} value={org.id}>
+                              {org.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </form>
+                )}
+              </div>
+
+              <div className="modal-actions">
+                {!isEditing ? (
+                  <>
+                    <button className="btn btn-primary" onClick={handleEditToggle}>
+                      ✏️ Editar
+                    </button>
+                    <button className="btn btn-outline" onClick={() => setShowPasswordModal(true)}>
+                      🔐 Cambiar Contraseña
+                    </button>
+                    <button
+                      className={`btn ${selectedUser.activo ? 'btn-warning' : 'btn-success'}`}
+                      onClick={() => handleToggleUserStatus(selectedUser.id, selectedUser.activo)}
+                      disabled={saving || selectedUser.email === 'admin@proyecto.com' || selectedUser.nombre === 'Admin del Sistema'}
+                      title={selectedUser.email === 'admin@proyecto.com' || selectedUser.nombre === 'Admin del Sistema' ? 'No se puede desactivar la cuenta de administrador del sistema' : ''}
+                    >
+                      {selectedUser.activo ? '⏸️ Desactivar' : '▶️ Activar'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="submit" className="btn btn-primary" onClick={handleSaveUser} disabled={saving}>
+                      {saving ? '⏳ Guardando...' : '💾 Guardar'}
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleEditToggle}>
+                      ❌ Cancelar
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Modal de cambio de contraseña */}
+        {showPasswordModal && (
+          <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
+            <div className="modal-content small-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>🔐 Cambiar Contraseña</h3>
+                <button className="modal-close" onClick={() => setShowPasswordModal(false)}>❌</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Nueva Contraseña para {selectedUser.nombre}</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 8 caracteres, mayúscula, minúscula y número"
+                    minLength="8"
+                  />
+
+                  {/* Indicadores de validación de contraseña */}
+                  {newPassword && (
+                    <div className="password-validation">
+                      <div className={`validation-item ${passwordValidation.length ? 'valid' : 'invalid'}`}>
+                        <span className="validation-icon">
+                          {passwordValidation.length ? '✅' : '❌'}
+                        </span>
+                        Mínimo 8 caracteres
+                      </div>
+                      <div className={`validation-item ${passwordValidation.uppercase ? 'valid' : 'invalid'}`}>
+                        <span className="validation-icon">
+                          {passwordValidation.uppercase ? '✅' : '❌'}
+                        </span>
+                        Al menos una mayúscula
+                      </div>
+                      <div className={`validation-item ${passwordValidation.lowercase ? 'valid' : 'invalid'}`}>
+                        <span className="validation-icon">
+                          {passwordValidation.lowercase ? '✅' : '❌'}
+                        </span>
+                        Al menos una minúscula
+                      </div>
+                      <div className={`validation-item ${passwordValidation.number ? 'valid' : 'invalid'}`}>
+                        <span className="validation-icon">
+                          {passwordValidation.number ? '✅' : '❌'}
+                        </span>
+                        Al menos un número
+                      </div>
+                      <div className={`validation-item ${passwordValidation.noSpaces ? 'valid' : 'invalid'}`}>
+                        <span className="validation-icon">
+                          {passwordValidation.noSpaces ? '✅' : '❌'}
+                        </span>
+                        Sin espacios
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-primary" onClick={handleResetPassword} disabled={saving}>
+                  {saving ? '⏳ Actualizando...' : '🔐 Actualizar Contraseña'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>
+                  ❌ Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

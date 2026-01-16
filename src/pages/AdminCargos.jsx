@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaEye, FaDownload, FaUsers, FaGraduationCap, FaFileAlt } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaEye, FaDownload, FaUsers, FaGraduationCap, FaFileAlt, FaChartLine, FaTasks } from 'react-icons/fa';
 import Modal from '../components/Modal';
 import './AdminCargos.css';
 import { BACKEND_URL } from '../utils/api';
@@ -36,14 +36,14 @@ const AdminCargos = () => {
   const [cargoMetrics, setCargoMetrics] = useState(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
-  
+
   // Estados para el formulario de creación
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredCargos, setFilteredCargos] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  
+
   // Estados para el formulario de edición
   const [editNombre, setEditNombre] = useState('');
   const [editDescripcion, setEditDescripcion] = useState('');
@@ -77,15 +77,15 @@ const AdminCargos = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setCargos(data.cargos || []);
       } else {
         const errorData = await response.json();
-        }
+      }
     } catch (error) {
-      } finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -99,7 +99,7 @@ const AdminCargos = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -119,7 +119,7 @@ const AdminCargos = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!nombre.trim() || !descripcion.trim()) {
       alert('Por favor completa todos los campos');
       return;
@@ -133,7 +133,7 @@ const AdminCargos = () => {
 
     try {
       const token = localStorage.getItem('authToken');
-      
+
       const response = await fetch(`${API_URL}/api/cargos`, {
         method: 'POST',
         headers: {
@@ -163,7 +163,7 @@ const AdminCargos = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    
+
     if (!editNombre.trim() || !editDescripcion.trim()) {
       alert('Por favor completa todos los campos');
       return;
@@ -252,7 +252,7 @@ const AdminCargos = () => {
 
   // Función para verificar si un cargo ya existe
   const cargoExists = (cargoNombre) => {
-    return cargos.some(cargo => 
+    return cargos.some(cargo =>
       cargo.nombre.toLowerCase() === cargoNombre.toLowerCase()
     );
   };
@@ -265,15 +265,15 @@ const AdminCargos = () => {
       descripcion: cargo.descripcion,
       isCreated: true // Marcar como ya creado
     }));
-    
+
     // Obtener cargos predefinidos que NO estén creados
-    const availableCargos = CARGOS_PREDEFINIDOS.filter(predefined => 
+    const availableCargos = CARGOS_PREDEFINIDOS.filter(predefined =>
       !cargoExists(predefined.nombre)
     ).map(cargo => ({
       ...cargo,
       isCreated: false // Marcar como disponible
     }));
-    
+
     // Combinar disponibles y ya creados
     return [...availableCargos, ...existingCargos];
   };
@@ -282,12 +282,12 @@ const AdminCargos = () => {
   const handleNombreChange = (e) => {
     const value = e.target.value;
     setNombre(value);
-    
+
     const allCargos = getCombinedCargos();
-    
+
     if (value.length > 0) {
       // Filtrar cargos según el texto ingresado
-      const filtered = allCargos.filter(cargo => 
+      const filtered = allCargos.filter(cargo =>
         cargo.nombre.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredCargos(filtered);
@@ -319,7 +319,7 @@ const AdminCargos = () => {
       alert('⚠️ Este cargo ya está creado. No se puede crear nuevamente.');
       return;
     }
-    
+
     setNombre(cargo.nombre);
     setDescripcion(cargo.descripcion);
     setShowDropdown(false);
@@ -333,74 +333,6 @@ const AdminCargos = () => {
       setShowDropdown(false);
       setDropdownOpen(false);
     }, 200);
-  };
-
-  const downloadCargoReport = async (cargo) => {
-    try {
-      const token = localStorage.getItem('authToken');
-      
-      const response = await fetch(`${API_URL}/api/cargos/${cargo.id}/reporte-excel`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Reporte_${cargo.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        alert('✅ Reporte individual generado exitosamente');
-      } else {
-        const errorData = await response.json();
-        alert(`❌ Error: ${errorData.message || 'Error generando reporte individual'}`);
-      }
-    } catch (error) {
-      alert('❌ Error generando reporte individual');
-    }
-  };
-
-  // Función para generar reporte Excel
-  const generateExcelReport = async () => {
-    try {
-      setGeneratingReport(true);
-      const token = localStorage.getItem('authToken');
-      
-      const response = await fetch(`${API_URL}/api/cargos/reporte-excel`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Reporte_Cargos_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        alert('✅ Reporte Excel generado exitosamente');
-      } else {
-        const errorData = await response.json();
-        alert(`❌ Error: ${errorData.message || 'Error generando reporte'}`);
-      }
-    } catch (error) {
-      alert('❌ Error generando reporte Excel');
-    } finally {
-      setGeneratingReport(false);
-    }
   };
 
   if (loading) {
@@ -419,33 +351,23 @@ const AdminCargos = () => {
       </div>
 
       <div className="admin-cargos-actions">
-        <button 
+        <button
           className="btn-primary"
           onClick={() => setModalOpen(true)}
         >
           <FaPlus /> Crear Nuevo Cargo
         </button>
-        
-        <button 
-          className="btn-success"
-          onClick={generateExcelReport}
-          disabled={generatingReport}
-          style={{ marginLeft: '10px' }}
-        >
-          <FaDownload /> 
-          {generatingReport ? 'Generando...' : 'Reporte Excel'}
-        </button>
       </div>
 
       <div className="admin-cargos-content">
-        {}
+        { }
         <div className="cargos-grid">
           {cargos.map((cargo) => (
             <div key={cargo.id} className="cargo-card" onClick={() => openDetailModal(cargo)}>
               <div className="cargo-header">
                 <h3>{cargo.nombre}</h3>
                 <div className="cargo-actions">
-                  <button 
+                  <button
                     className="btn-edit"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -455,7 +377,7 @@ const AdminCargos = () => {
                   >
                     <FaEdit />
                   </button>
-                  <button 
+                  <button
                     className="btn-delete"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -467,7 +389,7 @@ const AdminCargos = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div className="cargo-body">
                 <p className="cargo-description">{cargo.descripcion}</p>
                 <div className="cargo-details">
@@ -476,9 +398,30 @@ const AdminCargos = () => {
                   </span>
                 </div>
               </div>
-              
+
               <div className="cargo-footer">
-                <span className="click-hint">Haz clic para ver detalles</span>
+                <div className="cargo-action-buttons">
+                  <button
+                    className="btn-action btn-progress"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDetailModal(cargo);
+                    }}
+                    title="Ver progreso y métricas"
+                  >
+                    <FaChartLine /> Ver Progreso
+                  </button>
+                  <button
+                    className="btn-action btn-edit-task"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(cargo);
+                    }}
+                    title="Editar cargo"
+                  >
+                    <FaTasks /> Editar
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -487,7 +430,7 @@ const AdminCargos = () => {
         {cargos.length === 0 && (
           <div className="no-cargos">
             <p>No hay cargos configurados</p>
-            <button 
+            <button
               className="btn-primary"
               onClick={() => setModalOpen(true)}
             >
@@ -526,7 +469,7 @@ const AdminCargos = () => {
                     {filteredCargos.map((cargo, index) => {
                       // Verificar si el cargo ya existe (usar isCreated si está disponible, sino verificar)
                       const exists = cargo.isCreated !== undefined ? cargo.isCreated : cargoExists(cargo.nombre);
-                      
+
                       return (
                         <div
                           key={index}
@@ -549,7 +492,7 @@ const AdminCargos = () => {
                 )}
               </div>
             </div>
-            
+
             <div className={`form-group form-group-description ${dropdownOpen ? 'dropdown-open' : ''}`}>
               <label htmlFor="descripcion">Descripción *</label>
               <textarea
@@ -561,7 +504,7 @@ const AdminCargos = () => {
                 required
               />
             </div>
-            
+
             <div className="form-actions">
               <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">
                 Cancelar
@@ -592,7 +535,7 @@ const AdminCargos = () => {
                 required
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="editDescripcion">Descripción *</label>
               <textarea
@@ -604,7 +547,7 @@ const AdminCargos = () => {
                 required
               />
             </div>
-            
+
             <div className="form-actions">
               <button type="button" onClick={() => setEditModalOpen(false)} className="btn-secondary">
                 Cancelar
@@ -650,7 +593,7 @@ const AdminCargos = () => {
                           <span className="metric-label">Usuarios</span>
                         </div>
                       </div>
-                      
+
                       <div className="metric-card">
                         <FaGraduationCap className="metric-icon" />
                         <div className="metric-content">
@@ -658,7 +601,7 @@ const AdminCargos = () => {
                           <span className="metric-label">Cursos</span>
                         </div>
                       </div>
-                      
+
                       <div className="metric-card">
                         <FaFileAlt className="metric-icon" />
                         <div className="metric-content">
@@ -666,7 +609,7 @@ const AdminCargos = () => {
                           <span className="metric-label">Documentos</span>
                         </div>
                       </div>
-                      
+
                       <div className="metric-card">
                         <div className="metric-content">
                           <span className="metric-value">{Math.round(cargoMetrics.promedioProgreso || 0)}%</span>
@@ -674,12 +617,12 @@ const AdminCargos = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {cargoMetrics.promedioProgreso > 0 && (
                       <div className="progress-bar-container">
                         <div className="progress-bar">
-                          <div 
-                            className="progress-fill" 
+                          <div
+                            className="progress-fill"
                             style={{ width: `${Math.min(cargoMetrics.promedioProgreso, 100)}%` }}
                           ></div>
                         </div>
@@ -696,14 +639,7 @@ const AdminCargos = () => {
                 )}
               </div>
 
-              <div className="cargo-actions-modal">
-                <button 
-                  className="btn-primary"
-                  onClick={() => downloadCargoReport(selectedCargo)}
-                >
-                  <FaDownload /> Descargar Reporte
-                </button>
-              </div>
+
             </div>
           )}
         </div>

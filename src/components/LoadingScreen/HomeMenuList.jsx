@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BookOpenCheck, ClipboardList, Users2, BarChart3, User, Settings, Home } from "lucide-react";
-import { FaGraduationCap, FaClipboardList, FaUser, FaBell, FaCog, FaHome, FaFileAlt, FaUsers } from "react-icons/fa";
+import { FaGraduationCap, FaClipboardList, FaUser, FaBell, FaCog, FaHome, FaFileAlt, FaUsers, FaCheckCircle } from "react-icons/fa";
 import PersonalizationModal from '../PersonalizationModal';
 import { BACKEND_URL } from '../../utils/api';
 import Modal from '../Modal';
 
-const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) => {
+const HomeMenuList = ({ isAdmin, isSuperAdmin, onNavigate, unreadCount, showNotifications }) => {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -16,22 +16,35 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
 
   let options = isAdmin
     ? [
-        { to: "/home", icon: <Home size={22} />, label: "Home" },
-        { to: "/admin-courses", icon: <BookOpenCheck size={22} />, label: "Gestión Cursos" },
-        { to: "/AdminBitacora", icon: <ClipboardList size={22} />, label: "Bitácora" },
-        { to: "/cuentas", icon: <Users2 size={22} />, label: "Cuentas" },
-        { to: "/dashboard", icon: <BarChart3 size={22} />, label: "Dashboard" },
-        { to: "/admin-documentos", icon: <FaFileAlt size={22} />, label: "Documentos" },
-        { to: "/admin-cargos", icon: <FaUsers size={22} />, label: "Cargos" },
-        { to: "/perfil", icon: <User size={22} />, label: "Perfil" },
-      ]
+      { to: "/home", icon: <Home size={22} />, label: "Home" },
+      { to: "/admin-courses", icon: <BookOpenCheck size={22} />, label: "Gestión Cursos" },
+      { to: "/AdminBitacora", icon: <ClipboardList size={22} />, label: "Bitácora" },
+      { to: "/cuentas", icon: <Users2 size={22} />, label: "Cuentas" },
+      { to: "/dashboard", icon: <BarChart3 size={22} />, label: "Dashboard" },
+      { to: "/admin-documentos", icon: <FaFileAlt size={22} />, label: "Documentos" },
+      { to: "/admin-cargos", icon: <FaUsers size={22} />, label: "Cargos" },
+      { to: "/perfil", icon: <User size={22} />, label: "Perfil" },
+    ]
     : [
-        { to: "/home", icon: <FaHome size={22} />, label: "Home" },
-        { to: "/courses", icon: <FaGraduationCap size={22} />, label: "Cursos" },
-        { to: "/bitacora", icon: <FaClipboardList size={22} />, label: "Bitácora" },
-        { to: "/documentos", icon: <FaFileAlt size={22} />, label: "Documentos" },
-        { to: "/perfil", icon: <FaUser size={22} />, label: "Perfil" },
-      ];
+      { to: "/home", icon: <FaHome size={22} />, label: "Home" },
+      { to: "/courses", icon: <FaGraduationCap size={22} />, label: "Cursos" },
+      { to: "/bitacora", icon: <FaClipboardList size={22} />, label: "Bitácora" },
+      { to: "/documentos", icon: <FaFileAlt size={22} />, label: "Documentos" },
+      { to: "/perfil", icon: <FaUser size={22} />, label: "Perfil" },
+    ];
+
+  // Agregar opción de Aprobaciones para SuperAdmin
+  if (isSuperAdmin) {
+    // Insertar después de Cargos (índice 6) o antes de Perfil
+    const aprobacionesOption = { to: "/admin-aprobaciones", icon: <FaCheckCircle size={22} />, label: "Aprobaciones" };
+    // Encontrar índice de Perfil
+    const perfilIndex = options.findIndex(o => o.label === "Perfil");
+    if (perfilIndex !== -1) {
+      options.splice(perfilIndex, 0, aprobacionesOption);
+    } else {
+      options.push(aprobacionesOption);
+    }
+  }
 
   if (showNotifications) {
     // Insertar notificaciones antes de perfil
@@ -136,12 +149,12 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
   return (
     <>
       <nav style={{
-        padding:'0', 
-        width:'100%',
-        height:'100vh', 
-        display:'flex', 
-        flexDirection:'column', 
-        justifyContent:'space-between',
+        padding: '0',
+        width: '100%',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
         background: 'var(--bg-menu)',
         color: 'var(--text-primary)',
         overflowY: 'auto',
@@ -150,16 +163,16 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
       }}>
         {/* Logo de la empresa */}
         <div style={{
-          display:'flex',
-          justifyContent:'center',
-          alignItems:'center',
-          padding:'1rem 0.8rem 1.2rem 0.8rem',
-          borderBottom:'1px solid var(--border-primary)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '1rem 0.8rem 1.2rem 0.8rem',
+          borderBottom: '1px solid var(--border-primary)',
           flexShrink: 0
         }}>
-          <img 
-            src="/farmeo.png" 
-            alt="Logo Empresa" 
+          <img
+            src="/farmeo.png"
+            alt="Logo Empresa"
             style={{
               maxWidth: isSmallScreen ? '110px' : '130px',
               width: '100%',
@@ -170,70 +183,70 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
         </div>
 
         <div style={{
-          flex: 1, 
+          flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
           minHeight: 0,
           paddingTop: '0.5rem'
         }}>
           <ul style={{
-            listStyle:'none',
-            margin:0,
-            padding:0,
-            display:'flex',
-            flexDirection:'column',
+            listStyle: 'none',
+            margin: 0,
+            padding: 0,
+            display: 'flex',
+            flexDirection: 'column',
             gap: isSmallScreen ? '0.7rem' : '0.9rem',
-            paddingLeft:'0.5rem',
-            paddingRight:'0.5rem',
+            paddingLeft: '0.5rem',
+            paddingRight: '0.5rem',
             paddingBottom: '1rem'
           }}>
             {options.map(opt => (
-              <li key={opt.to} style={{position:'relative'}}>
+              <li key={opt.to} style={{ position: 'relative' }}>
                 {opt.isNotif ? (
                   <>
                     <button
                       style={{
-                        display:'flex',
-                        alignItems:'center',
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: isSmallScreen ? '0.8rem' : '1rem',
                         background: isActive('/notificaciones') ? 'var(--gradient-primary)' : 'none',
-                        border:'none',
+                        border: 'none',
                         fontSize: isSmallScreen ? '0.95rem' : '1.05rem',
                         color: isActive('/notificaciones') ? 'var(--text-white)' : 'var(--text-primary)',
-                        cursor:'pointer',
+                        cursor: 'pointer',
                         padding: isSmallScreen ? '0.5rem 0.9rem' : '0.6rem 1.1rem',
-                        width:'100%',
-                        textAlign:'left',
-                        borderRadius:'8px',
-                        transition:'all 0.3s ease',
-                        position:'relative',
+                        width: '100%',
+                        textAlign: 'left',
+                        borderRadius: '8px',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
                         fontWeight: isActive('/notificaciones') ? '600' : '500',
                         boxShadow: isActive('/notificaciones') ? 'var(--shadow-medium)' : 'none'
                       }}
                       onClick={handleNotifClick}
                       onMouseEnter={e => {
                         if (!isActive('/notificaciones')) {
-                          e.currentTarget.style.background='var(--bg-card-hover)';
+                          e.currentTarget.style.background = 'var(--bg-card-hover)';
                         }
                       }}
                       onMouseLeave={e => {
                         if (!isActive('/notificaciones')) {
-                          e.currentTarget.style.background='none';
+                          e.currentTarget.style.background = 'none';
                         }
                       }}
                     >
                       {opt.icon}
                       {unreadCount > 0 && (
                         <span style={{
-                          position:'absolute',
-                          left:10,
-                          top:7,
-                          width:10,
-                          height:10,
-                          background:'#e74c3c',
-                          borderRadius:'50%',
-                          display:'inline-block',
-                          border:'2px solid var(--bg-menu)',
+                          position: 'absolute',
+                          left: 10,
+                          top: 7,
+                          width: 10,
+                          height: 10,
+                          background: '#e74c3c',
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          border: '2px solid var(--bg-menu)',
                           zIndex: 2
                         }}></span>
                       )}
@@ -243,32 +256,32 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
                 ) : (
                   <button
                     style={{
-                      display:'flex',
-                      alignItems:'center',
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: isSmallScreen ? '0.8rem' : '1rem',
                       background: isActive(opt.to) ? 'var(--gradient-primary)' : 'none',
-                      border:'none',
+                      border: 'none',
                       fontSize: isSmallScreen ? '0.95rem' : '1.05rem',
                       color: isActive(opt.to) ? 'var(--text-white)' : 'var(--text-primary)',
-                      cursor:'pointer',
+                      cursor: 'pointer',
                       padding: isSmallScreen ? '0.5rem 0.9rem' : '0.6rem 1.1rem',
-                      width:'100%',
-                      textAlign:'left',
-                      borderRadius:'8px',
-                      transition:'all 0.3s ease',
-                      position:'relative',
+                      width: '100%',
+                      textAlign: 'left',
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
                       fontWeight: isActive(opt.to) ? '600' : '500',
                       boxShadow: isActive(opt.to) ? 'var(--shadow-medium)' : 'none'
                     }}
-                    onClick={() => { navigate(opt.to); if(onNavigate) onNavigate(); }}
+                    onClick={() => { navigate(opt.to); if (onNavigate) onNavigate(); }}
                     onMouseEnter={e => {
                       if (!isActive(opt.to)) {
-                        e.currentTarget.style.background='var(--bg-card-hover)';
+                        e.currentTarget.style.background = 'var(--bg-card-hover)';
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive(opt.to)) {
-                        e.currentTarget.style.background='none';
+                        e.currentTarget.style.background = 'none';
                       }
                     }}
                   >
@@ -276,44 +289,44 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
                     <span>{opt.label}</span>
                     {isActive(opt.to) && (
                       <span style={{
-                        position:'absolute',
-                        left:0,
-                        top:'50%',
-                        transform:'translateY(-50%)',
-                        width:'4px',
-                        height:'60%',
-                        background:'var(--text-white)',
-                        borderRadius:'0 4px 4px 0'
+                        position: 'absolute',
+                        left: 0,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: '4px',
+                        height: '60%',
+                        background: 'var(--text-white)',
+                        borderRadius: '0 4px 4px 0'
                       }}></span>
                     )}
                   </button>
                 )}
               </li>
             ))}
-            
+
             {/* Botón de Personalización */}
             <li>
               <button
                 style={{
-                  display:'flex',
-                  alignItems:'center',
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: isSmallScreen ? '0.8rem' : '1rem',
-                  background:'none',
-                  border:'none',
+                  background: 'none',
+                  border: 'none',
                   fontSize: isSmallScreen ? '0.95rem' : '1.05rem',
-                  color:'var(--text-primary)',
-                  cursor:'pointer',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
                   padding: isSmallScreen ? '0.5rem 0.9rem' : '0.6rem 1.1rem',
-                  width:'100%',
-                  textAlign:'left',
-                  borderRadius:'8px',
-                  transition:'all 0.3s ease',
-                  position:'relative',
-                  fontWeight:'500'
+                  width: '100%',
+                  textAlign: 'left',
+                  borderRadius: '8px',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  fontWeight: '500'
                 }}
                 onClick={() => setShowPersonalization(true)}
-                onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background='none'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
                 <FaCog size={22} />
                 <span>Personalizar</span>
@@ -321,29 +334,29 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
             </li>
           </ul>
         </div>
-        
+
         {/* Botón cerrar sesión abajo */}
         <div style={{
-          marginTop:'auto',
-          padding:'1.2rem 0.8rem 1.2rem 0.8rem',
-          borderTop:'1.5px solid var(--border-primary)',
-          display:'flex',
-          justifyContent:'center',
+          marginTop: 'auto',
+          padding: '1.2rem 0.8rem 1.2rem 0.8rem',
+          borderTop: '1.5px solid var(--border-primary)',
+          display: 'flex',
+          justifyContent: 'center',
           flexShrink: 0
         }}>
           <button
             className="logout-btn"
             style={{
-              background:'var(--gradient-danger)',
-              color:'var(--text-white)',
+              background: 'var(--gradient-danger)',
+              color: 'var(--text-white)',
               padding: isSmallScreen ? '0.5rem 1.2rem' : '0.6rem 1.5rem',
-              borderRadius:'8px',
-              fontWeight:600,
-              border:'none',
-              cursor:'pointer',
+              borderRadius: '8px',
+              fontWeight: 600,
+              border: 'none',
+              cursor: 'pointer',
               fontSize: isSmallScreen ? '0.9rem' : '1rem',
-              transition:'all 0.3s ease',
-              boxShadow:'var(--shadow-light)',
+              transition: 'all 0.3s ease',
+              boxShadow: 'var(--shadow-light)',
               width: '100%',
               maxWidth: '100%'
             }}
@@ -361,15 +374,15 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
           </button>
         </div>
       </nav>
-      
-      <PersonalizationModal 
-        isOpen={showPersonalization} 
-        onClose={() => setShowPersonalization(false)} 
+
+      <PersonalizationModal
+        isOpen={showPersonalization}
+        onClose={() => setShowPersonalization(false)}
       />
 
       {/* Modal de Notificaciones */}
-      <Modal 
-        isOpen={showNotifDropdown} 
+      <Modal
+        isOpen={showNotifDropdown}
         onClose={() => setShowNotifDropdown(false)}
         title={`Notificaciones ${unreadCount > 0 ? `(${unreadCount})` : ''}`}
       >
@@ -424,7 +437,7 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
                 // Determinar colores según el tema para mejor contraste
                 const getUnreadStyles = () => {
                   const colorScheme = document.documentElement.getAttribute('data-color-scheme');
-                  
+
                   // Para tema pastel, usar texto oscuro
                   if (colorScheme === 'pastel') {
                     return {
@@ -436,7 +449,7 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
                       textShadow: 'none'
                     };
                   }
-                  
+
                   // Para tema neon, usar texto negro con efecto neon
                   if (colorScheme === 'neon') {
                     return {
@@ -448,7 +461,7 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
                       textShadow: '0 0 8px rgba(0, 255, 136, 0.8), 0 0 12px rgba(0, 255, 136, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3)'
                     };
                   }
-                  
+
                   // Para otros temas, usar texto blanco con sombra
                   return {
                     background: 'var(--gradient-primary)',
@@ -459,101 +472,101 @@ const HomeMenuList = ({ isAdmin, onNavigate, unreadCount, showNotifications }) =
                     textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
                   };
                 };
-                
+
                 const unreadStyles = !n.is_read ? getUnreadStyles() : null;
-                
+
                 return (
-                <li key={n.id} style={{
-                  background: n.is_read ? 'var(--bg-card)' : (unreadStyles?.background || 'var(--gradient-primary)'),
-                  borderRadius: '12px',
-                  padding: '1rem 1.2rem',
-                  boxShadow: 'var(--shadow-light)',
-                  border: n.is_read ? '1px solid var(--border-primary)' : (unreadStyles?.border || '2px solid var(--border-focus)'),
-                  borderLeft: !n.is_read ? (unreadStyles?.borderLeft || '4px solid var(--border-focus)') : undefined,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  transition: 'all 0.3s ease',
-                  position: 'relative'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'var(--shadow-light)';
-                }}
-                >
-                  {!n.is_read && (
-                    <span style={{
-                      position: 'absolute',
-                      top: '0.8rem',
-                      right: '0.8rem',
-                      width: '10px',
-                      height: '10px',
-                      background: 'var(--text-danger)',
-                      borderRadius: '50%',
-                      display: 'inline-block'
-                    }}></span>
-                  )}
-                  <div style={{
-                    fontSize: '1.05rem',
-                    color: n.is_read ? 'var(--text-primary)' : (unreadStyles?.messageColor || '#ffffff'),
-                    fontWeight: n.is_read ? '500' : (unreadStyles?.textShadow ? '700' : '600'),
-                    letterSpacing: '0.01em',
-                    lineHeight: '1.5',
-                    paddingRight: !n.is_read ? '1.5rem' : '0',
-                    textShadow: !n.is_read ? (unreadStyles?.textShadow || '0 1px 2px rgba(0, 0, 0, 0.2)') : 'none'
-                  }}>{n.message}</div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    color: n.is_read ? 'var(--text-secondary)' : (unreadStyles?.dateColor || 'rgba(255, 255, 255, 0.9)'),
+                  <li key={n.id} style={{
+                    background: n.is_read ? 'var(--bg-card)' : (unreadStyles?.background || 'var(--gradient-primary)'),
+                    borderRadius: '12px',
+                    padding: '1rem 1.2rem',
+                    boxShadow: 'var(--shadow-light)',
+                    border: n.is_read ? '1px solid var(--border-primary)' : (unreadStyles?.border || '2px solid var(--border-focus)'),
+                    borderLeft: !n.is_read ? (unreadStyles?.borderLeft || '4px solid var(--border-focus)') : undefined,
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: '0.5rem',
-                    textShadow: !n.is_read ? (unreadStyles?.textShadow || '0 1px 2px rgba(0, 0, 0, 0.2)') : 'none',
-                    fontWeight: !n.is_read && unreadStyles?.textShadow ? '600' : '400'
-                  }}>
-                    <span>{new Date(n.created_at).toLocaleString('es-ES', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}</span>
-                  </div>
-                  {!n.is_read && (
-                    <button
-                      style={{
-                        marginTop: '0.5rem',
-                        background: 'var(--gradient-primary)',
-                        color: 'var(--text-white)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.95rem',
-                        padding: '0.5rem 1rem',
-                        alignSelf: 'flex-start',
-                        transition: 'all 0.3s ease',
-                        fontWeight: '500'
-                      }}
-                      onClick={() => handleMarkAsRead(n.id)}
-                      onMouseEnter={e => {
-                        e.target.style.background = 'var(--gradient-primary-hover)';
-                        e.target.style.transform = 'translateY(-1px)';
-                        e.target.style.boxShadow = 'var(--shadow-medium)';
-                      }}
-                      onMouseLeave={e => {
-                        e.target.style.background = 'var(--gradient-primary)';
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    >
-                      Marcar como leída
-                    </button>
-                  )}
-                </li>
+                    transition: 'all 0.3s ease',
+                    position: 'relative'
+                  }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'var(--shadow-light)';
+                    }}
+                  >
+                    {!n.is_read && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '0.8rem',
+                        right: '0.8rem',
+                        width: '10px',
+                        height: '10px',
+                        background: 'var(--text-danger)',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                      }}></span>
+                    )}
+                    <div style={{
+                      fontSize: '1.05rem',
+                      color: n.is_read ? 'var(--text-primary)' : (unreadStyles?.messageColor || '#ffffff'),
+                      fontWeight: n.is_read ? '500' : (unreadStyles?.textShadow ? '700' : '600'),
+                      letterSpacing: '0.01em',
+                      lineHeight: '1.5',
+                      paddingRight: !n.is_read ? '1.5rem' : '0',
+                      textShadow: !n.is_read ? (unreadStyles?.textShadow || '0 1px 2px rgba(0, 0, 0, 0.2)') : 'none'
+                    }}>{n.message}</div>
+                    <div style={{
+                      fontSize: '0.9rem',
+                      color: n.is_read ? 'var(--text-secondary)' : (unreadStyles?.dateColor || 'rgba(255, 255, 255, 0.9)'),
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      textShadow: !n.is_read ? (unreadStyles?.textShadow || '0 1px 2px rgba(0, 0, 0, 0.2)') : 'none',
+                      fontWeight: !n.is_read && unreadStyles?.textShadow ? '600' : '400'
+                    }}>
+                      <span>{new Date(n.created_at).toLocaleString('es-ES', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</span>
+                    </div>
+                    {!n.is_read && (
+                      <button
+                        style={{
+                          marginTop: '0.5rem',
+                          background: 'var(--gradient-primary)',
+                          color: 'var(--text-white)',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.95rem',
+                          padding: '0.5rem 1rem',
+                          alignSelf: 'flex-start',
+                          transition: 'all 0.3s ease',
+                          fontWeight: '500'
+                        }}
+                        onClick={() => handleMarkAsRead(n.id)}
+                        onMouseEnter={e => {
+                          e.target.style.background = 'var(--gradient-primary-hover)';
+                          e.target.style.transform = 'translateY(-1px)';
+                          e.target.style.boxShadow = 'var(--shadow-medium)';
+                        }}
+                        onMouseLeave={e => {
+                          e.target.style.background = 'var(--gradient-primary)';
+                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.boxShadow = 'none';
+                        }}
+                      >
+                        Marcar como leída
+                      </button>
+                    )}
+                  </li>
                 );
               })}
             </ul>

@@ -5,14 +5,21 @@ const RoleBadge = memo(() => {
   // Obtener el rol del usuario de manera eficiente
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const userRole = user?.rol || 'Empleado';
-  
+
   // Determinar si es administrador
+  // Determinar roles
+  const isSuperAdmin = userRole === 'SuperAdmin' || user?.rol_detallado === 'SuperAdmin';
   const isAdmin = userRole === 'Admin' || userRole === 'Admin del Sistema';
-  
+
   // Configuración simple
-  const config = isAdmin 
-    ? { icon: '👑', text: 'Administrador', className: 'admin' }
-    : { icon: '💼', text: 'Empleado', className: 'employee' };
+  let config;
+  if (isSuperAdmin) {
+    config = {text: 'SuperAdministrador', className: 'superadmin' };
+  } else if (isAdmin) {
+    config = {text: 'Administrador', className: 'admin' };
+  } else {
+    config = {text: 'Empleado', className: 'employee' };
+  }
 
   return (
     <div className={`role-badge ${config.className}`}>
