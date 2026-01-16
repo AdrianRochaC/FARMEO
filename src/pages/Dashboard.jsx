@@ -129,6 +129,152 @@ const Dashboard = () => {
     };
   }, [nonAdminUsers, progressByUser]);
 
+  // Función para descargar reporte en PDF
+  const downloadPDF = async () => {
+    try {
+      // Importar dinámicamente las librerías
+      const jsPDF = (await import('jspdf')).default;
+      const html2canvas = (await import('html2canvas')).default;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Título del reporte
+      pdf.setFontSize(20);
+      pdf.setTextColor(67, 233, 123); // Verde
+      pdf.text('Dashboard de Progreso', pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 10;
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Generado: ${new Date().toLocaleString('es-CO')}`, pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 15;
+
+      // Estadísticas generales
+      if (generalStats) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Estadísticas Generales', 20, yPosition);
+        yPosition += 10;
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(60, 60, 60);
+        pdf.text(`Usuarios Activos: ${generalStats.usuarios_activos || 0}`, 20, yPosition);
+        pdf.text(`Cursos Totales: ${generalStats.total_cursos || 0}`, 80, yPosition);
+        pdf.text(`Progreso Promedio: ${generalStats.progreso_promedio_general ? Math.round(generalStats.progreso_promedio_general) : 0}%`, 140, yPosition);
+        yPosition += 15;
+      }
+
+      // Capturar gráficas si están visibles
+      if (showCharts) {
+        const chartsSection = document.querySelector('.dashboard-charts-section');
+        if (chartsSection) {
+          pdf.setFontSize(14);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text('Análisis Visual', 20, yPosition);
+          yPosition += 5;
+
+          const canvas = await html2canvas(chartsSection, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+          });
+
+          const imgData = canvas.toDataURL('image/png');
+          const imgWidth = pageWidth - 40;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          // Si la imagen es muy alta, agregar nueva página
+          if (yPosition + imgHeight > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 10;
+        }
+      }
+
+      // Tabla de datos
+      pdf.addPage();
+      yPosition = 20;
+
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('Detalle de Progreso por Usuario', 20, yPosition);
+      yPosition += 10;
+
+      // Encabezados de tabla
+      pdf.setFontSize(8);
+      pdf.setFillColor(67, 233, 123);
+      pdf.rect(20, yPosition, pageWidth - 40, 7, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('Usuario', 22, yPosition + 5);
+      pdf.text('Cargo', 70, yPosition + 5);
+      pdf.text('Curso', 110, yPosition + 5);
+      pdf.text('Video', 155, yPosition + 5);
+      pdf.text('Eval', 175, yPosition + 5);
+      yPosition += 7;
+
+      // Datos
+      pdf.setTextColor(0, 0, 0);
+      nonAdminUsers.forEach(user => {
+        const cursos = progressByUser[user.nombre] || [];
+        const cargo = user.rol || 'Sin cargo';
+
+        if (cursos.length === 0) {
+          // Verificar si necesitamos nueva página
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          pdf.setFillColor(245, 245, 245);
+          pdf.rect(20, yPosition, pageWidth - 40, 6, 'F');
+          pdf.text(user.nombre.substring(0, 25), 22, yPosition + 4);
+          pdf.text(cargo.substring(0, 20), 70, yPosition + 4);
+          pdf.text('Sin cursos', 110, yPosition + 4);
+          yPosition += 6;
+        } else {
+          cursos.forEach((curso, idx) => {
+            if (yPosition > pageHeight - 20) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+
+            if (idx % 2 === 0) {
+              pdf.setFillColor(245, 245, 245);
+              pdf.rect(20, yPosition, pageWidth - 40, 6, 'F');
+            }
+
+            pdf.text(user.nombre.substring(0, 25), 22, yPosition + 4);
+            pdf.text(cargo.substring(0, 20), 70, yPosition + 4);
+            pdf.text((curso.curso || `Curso ${curso.course_id}`).substring(0, 25), 110, yPosition + 4);
+            pdf.text(curso.video_completed ? 'Sí' : 'No', 155, yPosition + 4);
+
+            const evalText = curso.evaluation_score !== null
+              ? `${curso.evaluation_score}/${curso.evaluation_total}`
+              : 'N/A';
+            pdf.text(evalText, 175, yPosition + 4);
+
+            yPosition += 6;
+          });
+        }
+      });
+
+      // Guardar PDF
+      pdf.save(`Dashboard_Progreso_${new Date().toISOString().split('T')[0]}.pdf`);
+      alert('✅ Reporte PDF generado exitosamente');
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('❌ Error al generar el PDF. Asegúrate de que las gráficas estén visibles.');
+    }
+  };
+
   return (
     <div className="dashboard-container-bg">
       <div className="dashboard-header">
@@ -216,6 +362,22 @@ const Dashboard = () => {
             }}
           >
             {showCharts ? '📊 Ocultar Gráficas' : '📈 Mostrar Gráficas'}
+          </button>
+          <button
+            onClick={downloadPDF}
+            style={{
+              padding: '0.5rem 1.5rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'var(--gradient-success)',
+              color: 'white',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.2)'
+            }}
+          >
+            📄 Descargar PDF
           </button>
         </div>
       </div>
