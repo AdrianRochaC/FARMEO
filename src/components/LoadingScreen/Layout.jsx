@@ -10,9 +10,11 @@ import { BACKEND_URL } from '../../utils/api';
 const Layout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const navigate = useNavigate();
-  
-  // Determinar si es admin
-  const isAdmin = user && (user.rol === 'Admin' || user.rol === 'Administrador');
+
+  // Determinar si es admin o superadmin
+  const isAdmin = user && (user.rol === 'Admin' || user.rol === 'Administrador' || user.rol === 'SuperAdmin' || user.rol_detallado === 'SuperAdmin');
+  const isSuperAdmin = user && (user.rol === 'SuperAdmin' || user.rol_detallado === 'SuperAdmin');
+
   const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -24,11 +26,11 @@ const Layout = ({ children }) => {
     // Obtener cantidad de notificaciones no leídas solo si hay usuario logueado
     const token = localStorage.getItem('authToken');
     const user = JSON.parse(localStorage.getItem('user') || 'null');
-    
+
     if (!token || !user || location.pathname === '/login' || location.pathname === '/register') {
       return;
     }
-    
+
     fetch(`${BACKEND_URL}/api/notifications/unread/count`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -47,7 +49,7 @@ const Layout = ({ children }) => {
       const mobile = window.innerWidth <= 768;
       setIsSmallScreen(small);
       setIsMobile(mobile);
-      
+
       // En pantallas pequeñas, colapsar automáticamente el menú
       if (small && !collapsed) {
         setCollapsed(true);
@@ -70,17 +72,17 @@ const Layout = ({ children }) => {
       {/* En Home, menú desplegable; en otras páginas, menú fijo siempre visible */}
       {location.pathname === '/home' ? (
         <>
-          <div style={{display:'flex',justifyContent:'flex-start',alignItems:'center',padding:'1.2rem 2.5rem 0 2.5rem'}}>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: '1.2rem 2.5rem 0 2.5rem' }}>
             <button
               className="home-hamburger-btn"
               style={{
-                background:'none',
-                border:'none',
-                fontSize:'2.1rem',
-                cursor:'pointer',
-                color:'var(--text-primary)',
-                position:'relative',
-                transition:'color 0.3s ease'
+                background: 'none',
+                border: 'none',
+                fontSize: '2.1rem',
+                cursor: 'pointer',
+                color: 'var(--text-primary)',
+                position: 'relative',
+                transition: 'color 0.3s ease'
               }}
               onClick={() => setShowMenu(true)}
               aria-label="Abrir menú"
@@ -88,66 +90,66 @@ const Layout = ({ children }) => {
               &#9776;
               {unreadCount > 0 && (
                 <span style={{
-                  position:'absolute',
-                  top:7,
-                  right:-7,
-                  width:13,
-                  height:13,
-                  background:'#e74c3c',
-                  borderRadius:'50%',
-                  display:'inline-block',
-                  border:'2px solid var(--bg-menu)',
-                  zIndex:2
+                  position: 'absolute',
+                  top: 7,
+                  right: -7,
+                  width: 13,
+                  height: 13,
+                  background: '#e74c3c',
+                  borderRadius: '50%',
+                  display: 'inline-block',
+                  border: '2px solid var(--bg-menu)',
+                  zIndex: 2
                 }}></span>
               )}
             </button>
           </div>
           {showMenu && (
             <div className="home-menu-overlay" style={{
-              position:'fixed',
-              top:0,
-              left:0,
-              width:'100vw',
-              height:'100vh',
-              background:'rgba(0,0,0,0.5)',
-              backdropFilter:'blur(8px)',
-              zIndex:9999,
-              display:'flex',
-              alignItems:'flex-start',
-              justifyContent:'flex-start'
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'flex-start'
             }}>
               <div style={{
-                background:'var(--bg-menu)',
-                minWidth:'220px',
-                maxWidth:'90vw',
-                height:'100vh',
-                boxShadow:'var(--shadow-card)',
-                padding:'0',
-                position:'relative',
-                display:'flex',
-                flexDirection:'column',
-                borderRight:'1px solid var(--border-primary)'
+                background: 'var(--bg-menu)',
+                minWidth: '220px',
+                maxWidth: '90vw',
+                height: '100vh',
+                boxShadow: 'var(--shadow-card)',
+                padding: '0',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                borderRight: '1px solid var(--border-primary)'
               }}>
                 <button
                   style={{
-                    position:'absolute',
-                    top:'1.2rem',
-                    right:'1.2rem',
-                    background:'none',
-                    border:'none',
-                    fontSize:'2rem',
-                    cursor:'pointer',
-                    color:'var(--text-primary)',
-                    transition:'color 0.3s ease'
+                    position: 'absolute',
+                    top: '1.2rem',
+                    right: '1.2rem',
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '2rem',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    transition: 'color 0.3s ease'
                   }}
                   onClick={() => setShowMenu(false)}
                   aria-label="Cerrar menú"
                 >
                   &times;
                 </button>
-                <HomeMenuList isAdmin={isAdmin} onNavigate={() => setShowMenu(false)} unreadCount={unreadCount} showNotifications={true} />
+                <HomeMenuList isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onNavigate={() => setShowMenu(false)} unreadCount={unreadCount} showNotifications={true} />
               </div>
-              <div style={{flex:1}} onClick={() => setShowMenu(false)} />
+              <div style={{ flex: 1 }} onClick={() => setShowMenu(false)} />
             </div>
           )}
         </>
@@ -179,16 +181,16 @@ const Layout = ({ children }) => {
               ☰
               {unreadCount > 0 && (
                 <span style={{
-                  position:'absolute',
-                  top:5,
-                  right:5,
-                  width:10,
-                  height:10,
-                  background:'#e74c3c',
-                  borderRadius:'50%',
-                  display:'inline-block',
-                  border:'2px solid var(--bg-card)',
-                  zIndex:2
+                  position: 'absolute',
+                  top: 5,
+                  right: 5,
+                  width: 10,
+                  height: 10,
+                  background: '#e74c3c',
+                  borderRadius: '50%',
+                  display: 'inline-block',
+                  border: '2px solid var(--bg-card)',
+                  zIndex: 2
                 }}></span>
               )}
             </button>
@@ -233,11 +235,11 @@ const Layout = ({ children }) => {
           }}>
             {!isMobile && (
               <div style={{
-                width:'100%',
-                display:'flex',
-                justifyContent:'flex-end',
-                alignItems:'center',
-                padding:'0.8rem 0.8rem 0 0',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                padding: '0.8rem 0.8rem 0 0',
                 flexShrink: 0
               }}>
                 <button
@@ -265,16 +267,16 @@ const Layout = ({ children }) => {
                       ☰
                       {unreadCount > 0 && (
                         <span style={{
-                          position:'absolute',
-                          top:2,
-                          right:2,
-                          width:13,
-                          height:13,
-                          background:'#e74c3c',
-                          borderRadius:'50%',
-                          display:'inline-block',
-                          border:'2px solid var(--bg-menu)',
-                          zIndex:2
+                          position: 'absolute',
+                          top: 2,
+                          right: 2,
+                          width: 13,
+                          height: 13,
+                          background: '#e74c3c',
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          border: '2px solid var(--bg-menu)',
+                          zIndex: 2
                         }}></span>
                       )}
                     </>
@@ -284,11 +286,11 @@ const Layout = ({ children }) => {
             )}
             {isMobile && !collapsed && (
               <div style={{
-                width:'100%',
-                display:'flex',
-                justifyContent:'flex-end',
-                alignItems:'center',
-                padding:'0.8rem 0.8rem 0 0',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                padding: '0.8rem 0.8rem 0 0',
                 flexShrink: 0
               }}>
                 <button
@@ -316,24 +318,24 @@ const Layout = ({ children }) => {
               </div>
             )}
             {!collapsed && (
-              <HomeMenuList isAdmin={isAdmin} unreadCount={unreadCount} showNotifications={true} onNavigate={isMobile ? () => setCollapsed(true) : undefined} />
+              <HomeMenuList isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} unreadCount={unreadCount} showNotifications={true} onNavigate={isMobile ? () => setCollapsed(true) : undefined} />
             )}
           </div>
         </>
       )}
       <main className="main-content" style={location.pathname !== '/home' ? {
-        marginLeft: isMobile ? '0' : (collapsed ? '56px' : (isSmallScreen ? '180px' : '220px')), 
-        paddingTop:'2rem',
+        marginLeft: isMobile ? '0' : (collapsed ? '56px' : (isSmallScreen ? '180px' : '220px')),
+        paddingTop: '2rem',
         paddingLeft: isMobile ? '1rem' : undefined,
         paddingRight: isMobile ? '1rem' : undefined,
-        transition:'margin-left 0.22s cubic-bezier(.4,0,.2,1)'
+        transition: 'margin-left 0.22s cubic-bezier(.4,0,.2,1)'
       } : {}}>
         {children}
       </main>
-      
+
       {/* Chatbot disponible en todas las páginas */}
       <Chatbot />
-      
+
       {/* Badge de rol - solo si hay usuario */}
       {user && <RoleBadge />}
     </div>

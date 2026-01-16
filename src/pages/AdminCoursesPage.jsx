@@ -651,22 +651,37 @@ const AdminCoursesPage = () => {
         {/* Debug removido - versión simple */}
 
         <form onSubmit={handleSubmit} className="admin-form">
-          <label>Título:</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ingresa el título del curso"
-            required
-          />
+          <div className="form-group">
+            <label>Título</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ingresa el título del curso"
+              required
+            />
+          </div>
 
-          <label>Descripción:</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe el contenido del curso"
-            required
-          />
+          <div className="form-group">
+            <label>Cargo/Departamento</label>
+            <select value={cargoId} onChange={(e) => setCargoId(parseInt(e.target.value))} required>
+              {cargos.map((cargo) => (
+                <option key={cargo.id} value={cargo.id}>
+                  {cargo.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Descripción</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe el contenido del curso"
+              required
+            />
+          </div>
 
           {/* Selector para elegir entre link o archivo */}
           <div
@@ -748,14 +763,7 @@ const AdminCoursesPage = () => {
             )}
           </div>
 
-          <label>Cargo/Departamento:</label>
-          <select value={cargoId} onChange={(e) => setCargoId(parseInt(e.target.value))} required>
-            {cargos.map((cargo) => (
-              <option key={cargo.id} value={cargo.id}>
-                {cargo.nombre}
-              </option>
-            ))}
-          </select>
+
 
           <button
             type="button"
@@ -923,96 +931,102 @@ const AdminCoursesPage = () => {
           {showCourses ? "Ocultar cursos creados" : "Mostrar cursos creados"}
         </button>
 
-        {showCourses && (
-          <div className="admin-course-list">
-            {courses.map((course) => (
-              <div key={course.id} className="admin-course-card">
-                <h3>{course.title}</h3>
-                <p>{course.description}</p>
-                <p>👥 Rol: {course.role}</p>
-                <p>⏳ Tiempo límite: {course.timeLimit || course.time_limit} min</p>
-                <p>🔁 Intentos: {course.attempts}</p>
+        {
+          showCourses && (
+            <div className="admin-course-list">
+              {courses.map((course) => (
+                <div key={course.id} className="admin-course-card">
+                  <h3>{course.title}</h3>
+                  <p>{course.description}</p>
+                  <p>👥 Rol: {course.role}</p>
+                  <p>⏳ Tiempo límite: {course.timeLimit || course.time_limit} min</p>
+                  <p>🔁 Intentos: {course.attempts}</p>
 
-                {/* Mostrar video según tipo en la lista de cursos */}
-                <div className="video-container">
-                  {(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).trim() !== '' ? (
-                    (course.videoUrl || course.video_url).includes('youtube.com/embed/') ? (
-                      <iframe
-                        src={course.videoUrl || course.video_url}
-                        title={course.title}
-                        width="100%"
-                        height="315"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                  {/* Mostrar video según tipo en la lista de cursos */}
+                  <div className="video-container">
+                    {(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).trim() !== '' ? (
+                      (course.videoUrl || course.video_url).includes('youtube.com/embed/') ? (
+                        <iframe
+                          src={course.videoUrl || course.video_url}
+                          title={course.title}
+                          width="100%"
+                          height="315"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video
+                          src={(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).startsWith('http')
+                            ? (course.videoUrl || course.video_url)
+                            : `${BACKEND_URL}${course.videoUrl || course.video_url}`}
+                          controls
+                          width="100%"
+                          height="315"
+                          style={{ background: '#000' }}
+                        >
+                          Tu navegador no soporta la reproducción de video.
+                        </video>
+                      )
                     ) : (
-                      <video
-                        src={(course.videoUrl || course.video_url) && (course.videoUrl || course.video_url).startsWith('http')
-                          ? (course.videoUrl || course.video_url)
-                          : `${BACKEND_URL}${course.videoUrl || course.video_url}`}
-                        controls
-                        width="100%"
-                        height="315"
-                        style={{ background: '#000' }}
-                      >
-                        Tu navegador no soporta la reproducción de video.
-                      </video>
-                    )
-                  ) : (
-                    <div className="no-video">
-                      <p>⚠️ No hay video disponible</p>
-                      <p>La URL del video está vacía en la base de datos</p>
-                    </div>
-                  )}
-                </div>
+                      <div className="no-video">
+                        <p>⚠️ No hay video disponible</p>
+                        <p>La URL del video está vacía en la base de datos</p>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="course-actions">
-                  <button onClick={() => handleEditCourse(course)}>✏️ Editar</button>
-                  <button onClick={() => handleDeleteCourse(course.id)}>🗑️ Eliminar</button>
+                  <div className="course-actions">
+                    <button onClick={() => handleEditCourse(course)}>✏️ Editar</button>
+                    <button onClick={() => handleDeleteCourse(course.id)}>🗑️ Eliminar</button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )
+        }
 
         {/* Mensajes globales de éxito/error - igual que documentos */}
-        {uploadSuccess && (
-          <div style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#16a34a',
-            color: 'white',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)',
-            zIndex: 1000,
-            fontSize: '0.9rem',
-            fontWeight: '500'
-          }}>
-            ✅ {uploadSuccess}
-          </div>
-        )}
-        {uploadError && (
-          <div style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#dc2626',
-            color: 'white',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
-            zIndex: 1000,
-            fontSize: '0.9rem',
-            fontWeight: '500'
-          }}>
-            ❌ {uploadError}
-          </div>
-        )}
-      </div>
-    </div>
+        {
+          uploadSuccess && (
+            <div style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              background: '#16a34a',
+              color: 'white',
+              padding: '12px 20px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)',
+              zIndex: 1000,
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}>
+              ✅ {uploadSuccess}
+            </div>
+          )
+        }
+        {
+          uploadError && (
+            <div style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              background: '#dc2626',
+              color: 'white',
+              padding: '12px 20px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+              zIndex: 1000,
+              fontSize: '0.9rem',
+              fontWeight: '500'
+            }}>
+              ❌ {uploadError}
+            </div>
+          )
+        }
+      </div >
+    </div >
   );
 };
 

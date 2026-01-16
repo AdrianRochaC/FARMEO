@@ -632,7 +632,7 @@ app.post('/api/documents', verifyToken, documentUpload.single('document'), async
       'SELECT rol_detallado, rol FROM usuarios WHERE id = ?',
       [req.user.id]
     );
-    const esSuperAdmin = userRows.length > 0 && 
+    const esSuperAdmin = userRows.length > 0 &&
       (userRows[0].rol_detallado === 'SuperAdmin' || userRows[0].rol === 'SuperAdmin');
 
     if (esSuperAdmin) {
@@ -684,7 +684,7 @@ app.post('/api/documents', verifyToken, documentUpload.single('document'), async
     } else {
       // Admin debe esperar aprobación - crear solicitud
       const descripcion = `Documento: ${req.file.originalname} - Global: ${is_global} - Roles: ${roles || 'N/A'} - Usuarios: ${users || 'N/A'}`;
-      
+
       // Guardar datos del documento en JSON para cuando se apruebe
       const documentoData = JSON.stringify({
         name: req.file.originalname,
@@ -712,7 +712,7 @@ app.post('/api/documents', verifyToken, documentUpload.single('document'), async
       const [superAdmins] = await connection.execute(
         "SELECT id FROM usuarios WHERE (rol_detallado = 'SuperAdmin' OR rol = 'SuperAdmin') AND activo = 1"
       );
-      
+
       for (const superAdmin of superAdmins) {
         await connection.execute(
           `INSERT INTO mensajes_chat (de_usuario_id, para_usuario_id, mensaje, tipo, leido)
@@ -1476,8 +1476,10 @@ app.post('/api/register', async (req, res) => {
     // Verificar admin asignado si se proporciona
     if (admin_asignado_id) {
       const [adminRows] = await connection.execute(
-        'SELECT id, rol_detallado, rol FROM usuarios WHERE id = ? AND (rol_detallado = ? OR rol = ?)',
-        [admin_asignado_id, 'Admin', 'Admin']
+        `SELECT id, rol_detallado, rol FROM usuarios 
+         WHERE id = ? 
+         AND (rol_detallado IN ('Admin', 'Administrador', 'SuperAdmin') OR rol IN ('Admin', 'Administrador', 'SuperAdmin'))`,
+        [admin_asignado_id]
       );
       if (adminRows.length === 0) {
         await connection.end();
@@ -1503,10 +1505,15 @@ app.post('/api/register', async (req, res) => {
       }
     }
 
-    // Insertar usuario con cargo_id, admin_asignado_id, organizacion_id y rol del cargo
+    // Determinar rol detallado basado en el cargo
+    const cargoNombre = cargo[0].nombre;
+    const rolesAdmin = ['Admin', 'Administrador', 'SuperAdmin', 'Admin del Sistema'];
+    const rolDetallado = rolesAdmin.includes(cargoNombre) ? cargoNombre : 'Empleado';
+
+    // Insertar usuario
     const [result] = await connection.execute(
       'INSERT INTO usuarios (nombre, email, password, rol, cargo_id, admin_asignado_id, organizacion_id, rol_detallado, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [nombre, email, hashedPassword, cargo[0].nombre, cargo_id, admin_asignado_id || null, organizacion_id || null, 'Empleado', true]
+      [nombre, email, hashedPassword, cargoNombre, cargo_id, admin_asignado_id || null, organizacion_id || null, rolDetallado, true]
     );
 
     await connection.end();
@@ -1534,7 +1541,7 @@ app.get('/api/users/admins', async (req, res) => {
     const connection = await createConnection();
     const [admins] = await connection.execute(
       `SELECT id, nombre, email FROM usuarios 
-       WHERE (rol_detallado = 'Admin' OR rol = 'Admin') AND activo = 1
+       WHERE (rol_detallado IN ('Admin', 'Administrador', 'SuperAdmin') OR rol IN ('Admin', 'Administrador', 'SuperAdmin')) AND activo = 1
        ORDER BY nombre`
     );
     await connection.end();
@@ -1577,20 +1584,26 @@ app.get('/api/users', verifyToken, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
     }
 
-    const userRol = userRows[0].rol_detallado || userRows[0].rol;
+    const userRol = userRows[0].rol;
+    const userRolDetallado = userRows[0].rol_detallado;
     const userId = userRows[0].id;
+
+    // Verificar permisos robustamente
+    const isSuperAdmin = userRol === 'SuperAdmin' || userRolDetallado === 'SuperAdmin';
+    const isAdmin = userRol === 'Admin' || userRol === 'Administrador' || userRolDetallado === 'Admin' || userRolDetallado === 'Administrador';
 
     let users = [];
 
-    if (userRol === 'SuperAdmin') {
+    if (isSuperAdmin) {
       // SuperAdmin ve todos los usuarios
       const [allUsers] = await connection.execute(
         `SELECT id, nombre, email, rol, rol_detallado, activo, admin_asignado_id, organizacion_id 
          FROM usuarios ORDER BY nombre`
       );
       users = allUsers;
-    } else if (userRol === 'Admin') {
-      // Admin ve: sus empleados asignados + usuarios sin admin asignado (para poder asignarlos)
+    } else if (isAdmin) {
+      // Admin/SuperAdmin ve: sus empleados asignados + usuarios sin admin asignado + todos si es SuperAdmin (pero SuperAdmin cae arriba si rol es exacto)
+      console.log('⚡ [API/USERS] Admin requesting users. ID:', userId);
       const [adminUsers] = await connection.execute(
         `SELECT id, nombre, email, rol, rol_detallado, activo, admin_asignado_id, organizacion_id 
          FROM usuarios 
@@ -1600,6 +1613,7 @@ app.get('/api/users', verifyToken, async (req, res) => {
          ORDER BY nombre`,
         [userId, userId]
       );
+      console.log('⚡ [API/USERS] Admin found users count:', adminUsers.length);
       users = adminUsers;
     } else {
       // Empleados no pueden ver otros usuarios (o solo su propio perfil)
@@ -1666,11 +1680,12 @@ app.put('/api/users/:id', verifyToken, async (req, res) => {
       });
     }
 
-    // Validar admin_asignado_id si se proporciona
     if (admin_asignado_id !== undefined && admin_asignado_id !== null && admin_asignado_id !== '') {
       const [adminRows] = await connection.execute(
-        'SELECT id, rol_detallado, rol FROM usuarios WHERE id = ? AND (rol_detallado = ? OR rol = ?)',
-        [admin_asignado_id, 'Admin', 'Admin']
+        `SELECT id, rol_detallado, rol FROM usuarios 
+         WHERE id = ? 
+         AND (rol_detallado IN ('Admin', 'Administrador', 'SuperAdmin') OR rol IN ('Admin', 'Administrador', 'SuperAdmin'))`,
+        [admin_asignado_id]
       );
       if (adminRows.length === 0) {
         await connection.end();
@@ -1696,10 +1711,10 @@ app.put('/api/users/:id', verifyToken, async (req, res) => {
       }
     }
 
-    // Actualizar usuario (incluyendo admin_asignado_id y organizacion_id)
+    // Actualizar usuario (incluyendo admin_asignado_id, organizacion_id y sincronizando rol_detallado)
     const [result] = await connection.execute(
-      'UPDATE usuarios SET nombre = ?, email = ?, rol = ?, activo = ?, admin_asignado_id = ?, organizacion_id = ? WHERE id = ?',
-      [nombre, email, rol, activo, admin_asignado_id || null, organizacion_id || null, id]
+      'UPDATE usuarios SET nombre = ?, email = ?, rol = ?, rol_detallado = ?, activo = ?, admin_asignado_id = ?, organizacion_id = ? WHERE id = ?',
+      [nombre, email, rol, rol, activo, admin_asignado_id || null, organizacion_id || null, id]
     );
 
     await connection.end();
@@ -1966,7 +1981,7 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
       'SELECT rol_detallado, rol FROM usuarios WHERE id = ?',
       [req.user.id]
     );
-    const esSuperAdmin = userRows.length > 0 && 
+    const esSuperAdmin = userRows.length > 0 &&
       (userRows[0].rol_detallado === 'SuperAdmin' || userRows[0].rol === 'SuperAdmin');
 
     if (esSuperAdmin) {
@@ -2021,7 +2036,7 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
       // Admin debe esperar aprobación - crear solicitud
       const descripcion = `Curso: ${title} - Para cargo: ${cargoNombre}`;
       const tipoContenido = 'documento'; // Los cursos se tratan como documentos para aprobación
-      
+
       // Guardar datos del curso en JSON para cuando se apruebe
       const cursoData = JSON.stringify({
         title,
@@ -2051,7 +2066,7 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
       const [superAdmins] = await connection.execute(
         "SELECT id FROM usuarios WHERE (rol_detallado = 'SuperAdmin' OR rol = 'SuperAdmin') AND activo = 1"
       );
-      
+
       for (const superAdmin of superAdmins) {
         await connection.execute(
           `INSERT INTO mensajes_chat (de_usuario_id, para_usuario_id, mensaje, tipo, leido)
@@ -2433,7 +2448,7 @@ app.get('/api/progress/all', verifyToken, async (req, res) => {
   const userRol = req.user.rol;
   let connection;
 
-  if (userRol !== 'Admin') {
+  if (userRol !== 'Admin' && userRol !== 'SuperAdmin' && userRol !== 'Administrador') {
     return res.status(403).json({ success: false, message: 'Acceso denegado. Solo administradores.' });
   }
 
@@ -2606,7 +2621,7 @@ app.post('/api/bitacora', verifyToken, async (req, res) => {
   const { rol } = req.user;
   const { titulo, descripcion, estado, asignados, deadline } = req.body;
 
-  if (rol !== 'Admin') {
+  if (rol !== 'Admin' && rol !== 'SuperAdmin' && rol !== 'Administrador') {
     return res.status(403).json({ success: false, message: 'Solo los administradores pueden crear tareas' });
   }
 
@@ -2697,7 +2712,7 @@ app.put('/api/bitacora/:id', verifyToken, async (req, res) => {
     const tarea = rows[0];
     const yaVenció = new Date(tarea.deadline) < new Date();
 
-    if (rol === 'Admin') {
+    if (rol === 'Admin' || rol === 'SuperAdmin' || rol === 'Administrador') {
       // Validar asignados
       if (!Array.isArray(asignados)) {
         await connection.end();
@@ -2747,7 +2762,7 @@ app.put('/api/bitacora/:id', verifyToken, async (req, res) => {
 
       // IMPORTANTE: El empleado ya no puede cambiar el estado manualmente.
       // Solo el Admin puede pasar por aquí y cambiar el estado directamente.
-      if (req.user.rol !== 'Admin') {
+      if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
         await connection.end();
         return res.status(403).json({
           success: false,
@@ -2816,7 +2831,7 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
     const asignadosArr = JSON.parse(tarea.asignados || "[]");
 
     // Solo el asignado o el Admin pueden subir evidencias
-    if (req.user.rol !== 'Admin' && !asignadosArr.includes(userId)) {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador' && !asignadosArr.includes(userId)) {
       await connection.end();
       return res.status(403).json({ success: false, message: 'No tienes permisos para subir evidencias en esta tarea' });
     }
@@ -2826,7 +2841,7 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
       'SELECT rol_detallado, rol FROM usuarios WHERE id = ?',
       [userId]
     );
-    const esSuperAdmin = userRows.length > 0 && 
+    const esSuperAdmin = userRows.length > 0 &&
       (userRows[0].rol_detallado === 'SuperAdmin' || userRows[0].rol === 'SuperAdmin');
 
     // Subir a Cloudinary
@@ -2839,8 +2854,8 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
 
     // Determinar tipo de evidencia
     const tipoEvidencia = !tarea.evidencia_inicial_url ? 'inicio' : 'cierre';
-    const tipoContenido = req.file.mimetype.startsWith('image/') ? 'foto' : 
-                         req.file.mimetype.startsWith('video/') ? 'video' : 'documento';
+    const tipoContenido = req.file.mimetype.startsWith('image/') ? 'foto' :
+      req.file.mimetype.startsWith('video/') ? 'video' : 'documento';
 
     if (esSuperAdmin) {
       // SuperAdmin puede aprobar directamente
@@ -2888,7 +2903,7 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
     } else {
       // Empleados deben esperar aprobación - crear solicitud
       const descripcion = `Evidencia de ${tipoEvidencia} para bitácora - Tarea ID: ${tareaId} - ${tarea.titulo}`;
-      
+
       await connection.execute(
         `INSERT INTO solicitudes_de_carga 
          (usuario_id, tipo_contenido, archivo_url, archivo_nombre, descripcion, estado, visible)
@@ -2906,7 +2921,7 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
       const [superAdmins] = await connection.execute(
         "SELECT id FROM usuarios WHERE (rol_detallado = 'SuperAdmin' OR rol = 'SuperAdmin') AND activo = 1"
       );
-      
+
       for (const superAdmin of superAdmins) {
         await connection.execute(
           `INSERT INTO mensajes_chat (de_usuario_id, para_usuario_id, mensaje, tipo, leido)
@@ -3098,7 +3113,7 @@ app.get('/api/usuarios', verifyToken, async (req, res) => {
 
 app.delete('/api/bitacora/:id', verifyToken, async (req, res) => {
   const { rol } = req.user;
-  if (rol !== 'Admin') return res.status(403).json({ success: false, message: 'Solo Admin puede eliminar' });
+  if (rol !== 'Admin' && rol !== 'SuperAdmin' && rol !== 'Administrador') return res.status(403).json({ success: false, message: 'Solo Admin puede eliminar' });
 
   try {
     const connection = await createConnection();
@@ -3150,7 +3165,7 @@ app.get('/api/cargos/reporte-excel', verifyToken, async (req, res) => {
     console.log('📅 Timestamp:', new Date().toISOString());
 
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       console.log('❌ Usuario no es admin, rechazando...');
       return res.status(403).json({
         success: false,
@@ -3268,7 +3283,7 @@ app.get('/api/cargos/reporte-excel', verifyToken, async (req, res) => {
 app.get('/api/cargos/:id/reporte-excel', verifyToken, async (req, res) => {
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden generar reportes'
@@ -3584,7 +3599,7 @@ app.get('/api/cargos/:id/metrics', verifyToken, async (req, res) => {
 app.get('/api/stats/general', verifyToken, async (req, res) => {
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden acceder a las estadísticas generales'
@@ -3658,7 +3673,7 @@ app.get('/api/cargos/activos', async (req, res) => {
 app.get('/api/cargos/para-cursos', verifyToken, async (req, res) => {
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden acceder a esta información'
@@ -3694,7 +3709,7 @@ app.get('/api/cargos/para-cursos', verifyToken, async (req, res) => {
 app.post('/api/courses/:id/generate-questions', verifyToken, async (req, res) => {
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden generar preguntas con IA'
@@ -3727,7 +3742,7 @@ app.post('/api/ai/generate-questions', verifyToken, async (req, res) => {
 
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden usar el servicio de IA'
@@ -3791,7 +3806,7 @@ app.post('/api/ai/analyze-youtube', verifyToken, async (req, res) => {
     console.log('📦 Body recibido:', JSON.stringify(req.body, null, 2));
 
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       console.log('❌ Usuario no es admin');
       return res.status(403).json({
         success: false,
@@ -3905,7 +3920,7 @@ app.post('/api/ai/analyze-video-file', videoAnalysisUpload.single('videoFile'), 
 
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden analizar archivos de video'
@@ -4045,7 +4060,7 @@ app.post('/api/ai/analyze-video-file', videoAnalysisUpload.single('videoFile'), 
 app.post('/api/ai/analyze-file', verifyToken, async (req, res) => {
   try {
     // Verificar que el usuario sea admin
-    if (req.user.rol !== 'Admin') {
+    if (req.user.rol !== 'Admin' && req.user.rol !== 'SuperAdmin' && req.user.rol !== 'Administrador') {
       return res.status(403).json({
         success: false,
         message: 'Solo los administradores pueden analizar archivos'
@@ -4222,14 +4237,14 @@ async function verifySuperAdmin(req, res, next) {
     }
 
     const userRol = userRows[0].rol_detallado || userRows[0].rol;
-    
+
     if (userRol !== 'SuperAdmin') {
       return res.status(403).json({
         success: false,
         message: 'Solo SuperAdmin puede realizar esta acción. Tu rol actual es: ' + userRol
       });
     }
-    
+
     next();
   } catch (error) {
     console.error('Error en verifySuperAdmin:', error);
@@ -4296,9 +4311,9 @@ app.get('/api/aprobaciones', verifyToken, verifySuperAdmin, async (req, res) => 
       success: true,
       solicitudes: solicitudes.map(s => ({
         ...s,
-        contexto: s.descripcion?.includes('bitacora') ? 'bitacora' : 
-                  s.descripcion?.includes('curso') ? 'curso' : 
-                  s.descripcion?.includes('documento') ? 'documento' : 'general'
+        contexto: s.descripcion?.includes('bitacora') ? 'bitacora' :
+          s.descripcion?.includes('curso') ? 'curso' :
+            s.descripcion?.includes('documento') ? 'documento' : 'general'
       }))
     });
   } catch (error) {
@@ -4355,12 +4370,12 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
 
     // Procesar según el contexto
     const descripcion = solicitud.descripcion || '';
-    
+
     if (descripcion.includes('bitacora')) {
       // Extraer tareaId de la descripción o usar un campo adicional
       const tareaIdMatch = descripcion.match(/tarea[_\s]*id[:\s]*(\d+)/i);
       const tipoEvidencia = descripcion.includes('inicio') ? 'inicio' : 'cierre';
-      
+
       if (tareaIdMatch) {
         const tareaId = tareaIdMatch[1];
         const [tareaRows] = await connection.execute(
@@ -4410,7 +4425,7 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
         const datosMatch = descripcion.match(/\| DATOS: (.+)$/);
         if (datosMatch) {
           const cursoData = JSON.parse(datosMatch[1]);
-          
+
           // Insertar curso
           const [result] = await connection.execute(
             `INSERT INTO courses (title, description, video_url, role, attempts, time_limit) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -4454,7 +4469,7 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
         const datosMatch = descripcion.match(/\| DATOS: (.+)$/);
         if (datosMatch) {
           const documentoData = JSON.parse(datosMatch[1]);
-          
+
           // Insertar documento
           const [result] = await connection.execute(
             `INSERT INTO documents (name, filename, mimetype, size, user_id, is_global) VALUES (?, ?, ?, ?, ?, ?)`,
