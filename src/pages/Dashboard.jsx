@@ -141,48 +141,115 @@ const Dashboard = () => {
       const pageHeight = pdf.internal.pageSize.getHeight();
       let yPosition = 20;
 
+      // Encabezado con colores FARMEO (oscuro profesional)
+      pdf.setFillColor(35, 36, 58); // Color oscuro de FARMEO
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+
       // Título del reporte
-      pdf.setFontSize(20);
-      pdf.setTextColor(67, 233, 123); // Verde
-      pdf.text('Dashboard de Progreso', pageWidth / 2, yPosition, { align: 'center' });
+      pdf.setFontSize(24);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('Dashboard de Progreso', pageWidth / 2, 18, { align: 'center' });
 
-      yPosition += 10;
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(`Generado: ${new Date().toLocaleString('es-CO')}`, pageWidth / 2, yPosition, { align: 'center' });
+      pdf.setFontSize(11);
+      pdf.setTextColor(200, 200, 200);
+      pdf.text(`Generado: ${new Date().toLocaleString('es-CO')}`, pageWidth / 2, 28, { align: 'center' });
 
-      yPosition += 15;
+      yPosition = 45;
 
-      // Estadísticas generales
+      // Estadísticas generales con cajas coloridas
       if (generalStats) {
-        pdf.setFontSize(14);
+        pdf.setFontSize(16);
         pdf.setTextColor(0, 0, 0);
         pdf.text('Estadísticas Generales', 20, yPosition);
-        yPosition += 10;
+        yPosition += 12;
 
-        pdf.setFontSize(10);
-        pdf.setTextColor(60, 60, 60);
-        pdf.text(`Usuarios Activos: ${generalStats.usuarios_activos || 0}`, 20, yPosition);
-        pdf.text(`Cursos Totales: ${generalStats.total_cursos || 0}`, 80, yPosition);
-        pdf.text(`Progreso Promedio: ${generalStats.progreso_promedio_general ? Math.round(generalStats.progreso_promedio_general) : 0}%`, 140, yPosition);
-        yPosition += 15;
+        const boxWidth = (pageWidth - 50) / 3;
+        const boxHeight = 25;
+        const startX = 20;
+
+        // Caja 1: Usuarios Activos (Azul)
+        pdf.setFillColor(59, 130, 246);
+        pdf.roundedRect(startX, yPosition, boxWidth, boxHeight, 3, 3, 'F');
+        pdf.setFontSize(20);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(`${generalStats.usuarios_activos || 0}`, startX + boxWidth / 2, yPosition + 12, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.text('Usuarios Activos', startX + boxWidth / 2, yPosition + 20, { align: 'center' });
+
+        // Caja 2: Cursos Totales (Verde)
+        pdf.setFillColor(16, 185, 129);
+        pdf.roundedRect(startX + boxWidth + 5, yPosition, boxWidth, boxHeight, 3, 3, 'F');
+        pdf.setFontSize(20);
+        pdf.text(`${generalStats.total_cursos || 0}`, startX + boxWidth + 5 + boxWidth / 2, yPosition + 12, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.text('Cursos Totales', startX + boxWidth + 5 + boxWidth / 2, yPosition + 20, { align: 'center' });
+
+        // Caja 3: Progreso Promedio (Naranja)
+        pdf.setFillColor(245, 158, 11);
+        pdf.roundedRect(startX + (boxWidth + 5) * 2, yPosition, boxWidth, boxHeight, 3, 3, 'F');
+        pdf.setFontSize(20);
+        pdf.text(`${generalStats.progreso_promedio_general ? Math.round(generalStats.progreso_promedio_general) : 0}%`, startX + (boxWidth + 5) * 2 + boxWidth / 2, yPosition + 12, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.text('Progreso Promedio', startX + (boxWidth + 5) * 2 + boxWidth / 2, yPosition + 20, { align: 'center' });
+
+        yPosition += boxHeight + 15;
       }
 
       // Capturar gráficas si están visibles
       if (showCharts) {
         const chartsSection = document.querySelector('.dashboard-charts-section');
         if (chartsSection) {
-          pdf.setFontSize(14);
+          // Agregar título manual antes de las gráficas
+          pdf.setFontSize(16);
           pdf.setTextColor(0, 0, 0);
           pdf.text('Análisis Visual', 20, yPosition);
-          yPosition += 5;
+          yPosition += 10;
 
-          const canvas = await html2canvas(chartsSection, {
+          // Crear un contenedor temporal con fondo blanco
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'fixed';
+          tempContainer.style.left = '-9999px';
+          tempContainer.style.top = '0';
+          tempContainer.style.background = '#ffffff';
+          tempContainer.style.padding = '20px';
+          tempContainer.style.width = chartsSection.offsetWidth + 'px';
+
+          // Clonar las gráficas
+          const clone = chartsSection.cloneNode(true);
+
+          // Ocultar el título h2 del clon
+          const h2Title = clone.querySelector('h2');
+          if (h2Title) {
+            h2Title.style.display = 'none';
+          }
+
+          // Forzar estilos claros en el clon
+          clone.style.background = '#ffffff';
+          clone.style.color = '#000000';
+
+          // Cambiar colores de texto en el clon
+          const allText = clone.querySelectorAll('*');
+          allText.forEach(el => {
+            const computedStyle = window.getComputedStyle(el);
+            if (computedStyle.color.includes('rgb')) {
+              el.style.color = '#000000';
+            }
+          });
+
+          tempContainer.appendChild(clone);
+          document.body.appendChild(tempContainer);
+
+          const canvas = await html2canvas(tempContainer, {
             scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            windowWidth: tempContainer.scrollWidth,
+            windowHeight: tempContainer.scrollHeight
           });
+
+          // Remover contenedor temporal
+          document.body.removeChild(tempContainer);
 
           const imgData = canvas.toDataURL('image/png');
           const imgWidth = pageWidth - 40;
@@ -210,7 +277,7 @@ const Dashboard = () => {
 
       // Encabezados de tabla
       pdf.setFontSize(8);
-      pdf.setFillColor(67, 233, 123);
+      pdf.setFillColor(35, 36, 58); // Color FARMEO oscuro
       pdf.rect(20, yPosition, pageWidth - 40, 7, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.text('Usuario', 22, yPosition + 5);

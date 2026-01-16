@@ -74,8 +74,8 @@ const Perfil = () => {
           </div>
         </div>
 
-        {/* Progreso solo si no es Admin */}
-        {user.rol !== 'Admin' && user.rol !== 'Admin del Sistema' && (
+        {/* Progreso solo si no es Admin ni SuperAdmin */}
+        {user.rol !== 'Admin' && user.rol !== 'Admin del Sistema' && user.rol !== 'SuperAdmin' && user.rol !== 'Administrador' && (
           <div className="perfil-card">
             <h2 style={{ marginBottom: '1rem' }}>📈 Progreso de Cursos</h2>
             {progress.length === 0 ? (
@@ -148,8 +148,8 @@ const Perfil = () => {
             <div className="info-icon">ℹ️</div>
             <div className="info-text">
               <h3>¿Necesitas cambiar tu información?</h3>
-              <p>Solo los administradores pueden modificar la información de las cuentas. 
-                 Si necesitas actualizar tus datos, contacta a tu administrador.</p>
+              <p>Solo los administradores pueden modificar la información de las cuentas.
+                Si necesitas actualizar tus datos, contacta a tu administrador.</p>
             </div>
           </div>
         </div>
