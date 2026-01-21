@@ -366,28 +366,6 @@ const AdminCargos = () => {
             <div key={cargo.id} className="cargo-card" onClick={() => openDetailModal(cargo)}>
               <div className="cargo-header">
                 <h3>{cargo.nombre}</h3>
-                <div className="cargo-actions">
-                  <button
-                    className="btn-edit"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(cargo);
-                    }}
-                    title="Editar cargo"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    className="btn-delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(cargo.id);
-                    }}
-                    title="Eliminar cargo"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
               </div>
 
               <div className="cargo-body">
@@ -420,6 +398,16 @@ const AdminCargos = () => {
                     title="Editar cargo"
                   >
                     <FaTasks /> Editar
+                  </button>
+                  <button
+                    className="btn-action btn-delete-task"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(cargo.id);
+                    }}
+                    title="Eliminar cargo"
+                  >
+                    <FaTrash /> Eliminar
                   </button>
                 </div>
               </div>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { BACKEND_URL } from "../utils/api";
 import "./Bitacora.css";
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCalendarWeek, FaCalendarDay, FaCamera, FaVideo } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaCalendarWeek, FaCalendarDay, FaCamera, FaVideo, FaSearch, FaHistory } from "react-icons/fa";
+import VerificationStatus from "../components/VerificationStatus";
 import CameraCapture from "../components/CameraCapture";
 
 const Bitacora = () => {
@@ -358,9 +359,13 @@ const Bitacora = () => {
                 </div>
                 {!user.rol || user.rol !== 'Admin' ? (
                   <div className="tracking-control">
-                    <button className="btn-open-tracking" onClick={() => openTracking(tarea)}>
-                      🔍 Ver Seguimiento
-                    </button>
+                    {tarea.pendiente_aprobacion ? (
+                      <VerificationStatus status="pendiente" text="Pendiente de Aprobación" />
+                    ) : (
+                      <button className="btn-open-tracking" onClick={() => openTracking(tarea)}>
+                        🔍 Ver Seguimiento
+                      </button>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -470,36 +475,44 @@ const Bitacora = () => {
                 <h4>{isInProgress ? 'Finalizar Tarea (Cierre)' : 'Iniciar Tarea (Inicio)'}</h4>
                 <p>Carga un archivo o captura evidencia para {isInProgress ? 'cerrar la tarea' : 'iniciar la tarea'}.</p>
                 <div className="upload-control" style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <label className="btn-open-tracking" style={{ cursor: 'pointer' }}>
-                    {isInProgress ? '📤 Seleccionar Archivo de Cierre' : '📤 Seleccionar Archivo de Inicio'}
-                    <input
-                      type="file"
-                      hidden
-                      onChange={(e) => subirEvidencia(selectedTarea.id, e.target.files[0])}
-                    />
-                  </label>
-                  <button 
-                    className="btn-open-tracking"
-                    onClick={() => {
-                      setPendingEvidenceType(isInProgress ? 'cierre' : 'inicio');
-                      setCameraType('foto');
-                      setShowCamera(true);
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <FaCamera /> Capturar Foto
-                  </button>
-                  <button 
-                    className="btn-open-tracking"
-                    onClick={() => {
-                      setPendingEvidenceType(isInProgress ? 'cierre' : 'inicio');
-                      setCameraType('video');
-                      setShowCamera(true);
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <FaVideo /> Grabar Video
-                  </button>
+                  {selectedTarea.pendiente_aprobacion ? (
+                    <div style={{ padding: '10px', background: 'rgba(243, 156, 18, 0.1)', borderRadius: '8px', border: '1px solid #f39c12', color: '#f39c12', width: '100%' }}>
+                      ⚠️ Tienes una evidencia pendiente de aprobación para esta tarea. No puedes subir más hasta que sea revisada.
+                    </div>
+                  ) : (
+                    <>
+                      <label className="btn-open-tracking" style={{ cursor: 'pointer' }}>
+                        {isInProgress ? '📤 Seleccionar Archivo de Cierre' : '📤 Seleccionar Archivo de Inicio'}
+                        <input
+                          type="file"
+                          hidden
+                          onChange={(e) => subirEvidencia(selectedTarea.id, e.target.files[0])}
+                        />
+                      </label>
+                      <button
+                        className="btn-open-tracking"
+                        onClick={() => {
+                          setPendingEvidenceType(isInProgress ? 'cierre' : 'inicio');
+                          setCameraType('foto');
+                          setShowCamera(true);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <FaCamera /> Capturar Foto
+                      </button>
+                      <button
+                        className="btn-open-tracking"
+                        onClick={() => {
+                          setPendingEvidenceType(isInProgress ? 'cierre' : 'inicio');
+                          setCameraType('video');
+                          setShowCamera(true);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <FaVideo /> Grabar Video
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}

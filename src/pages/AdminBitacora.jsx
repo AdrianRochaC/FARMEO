@@ -13,6 +13,10 @@ const AdminBitacora = () => {
   const [editingTarea, setEditingTarea] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("month"); // "month", "week", "day"
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [showDayPanel, setShowDayPanel] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedTaskForOptions, setSelectedTaskForOptions] = useState(null);
   const editorRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -126,13 +130,47 @@ const AdminBitacora = () => {
       })(),
       deadline: tarea.deadline ? tarea.deadline.split("T")[0] : "",
     });
+    setShowOptionsModal(false);
+    setShowDayPanel(false);
     setShowModal(true);
+    fetchUsuarios();
     // Usar un pequeño timeout para asegurar que el ref esté disponible si el modal se acaba de abrir
     setTimeout(() => {
       if (editorRef.current) {
         editorRef.current.innerHTML = tarea.descripcion || "";
       }
     }, 10);
+  };
+
+  const handleTaskClick = (tarea) => {
+    setSelectedTaskForOptions(tarea);
+    setShowOptionsModal(true);
+  };
+
+  const openCreateModal = (date = new Date()) => {
+    const dateStr = date.toISOString().split("T")[0];
+    setFormData({
+      titulo: "",
+      descripcion: "",
+      estado: "rojo",
+      asignados: [],
+      deadline: dateStr
+    });
+    setEditingTarea(null);
+    setShowModal(true);
+    setShowDayPanel(false);
+    fetchUsuarios();
+    setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, 10);
+  };
+
+  const handleDaySelect = (date) => {
+    setSelectedDay(date);
+    setShowDayPanel(true);
+  };
+
+  const getInitials = (nombre) => {
+    if (!nombre) return "??";
+    return nombre.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
   };
 
   // Navegación
@@ -180,27 +218,16 @@ const AdminBitacora = () => {
       const isToday = isSameDay(new Date(), date);
 
       cells.push(
-        <div key={d} className={`calendar-day ${isToday ? 'today' : ''}`} onClick={() => {
-          setFormData({
-            titulo: "",
-            descripcion: "",
-            estado: "rojo",
-            asignados: [],
-            deadline: date.toISOString().split("T")[0]
-          });
-          setEditingTarea(null);
-          setShowModal(true);
-          fetchUsuarios();
-          setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, 10);
-        }}>
+        <div key={d} className={`calendar-day ${isToday ? 'today' : ''}`} onClick={() => handleDaySelect(date)}>
           <span className="day-number">{d}</span>
           <div className="day-events">
-            {tareasDia.map(tarea => (
-              <div key={tarea.id} className={`calendar-event status-${tarea.estado}`} onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }}>
+            {tareasDia.slice(0, 3).map(tarea => (
+              <div key={tarea.id} className={`calendar-event status-${tarea.estado}`} onClick={(e) => { e.stopPropagation(); handleTaskClick(tarea); }}>
                 <div className="event-dot"></div>
                 <span className="event-title">{tarea.titulo}</span>
               </div>
             ))}
+            {tareasDia.length > 3 && <div className="more-events">+{tareasDia.length - 3} más</div>}
           </div>
         </div>
       );
@@ -229,31 +256,15 @@ const AdminBitacora = () => {
           const tareasDia = tareas.filter(t => isSameDay(new Date(t.deadline), date));
           const isToday = isSameDay(new Date(), date);
           return (
-            <div key={date.toString()} className={`week-day-col ${isToday ? 'today' : ''}`} onClick={() => {
-              setFormData({
-                titulo: "",
-                descripcion: "",
-                estado: "rojo",
-                asignados: [],
-                deadline: date.toISOString().split("T")[0]
-              });
-              setEditingTarea(null);
-              setShowModal(true);
-              fetchUsuarios();
-              setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = ""; }, 10);
-            }}>
+            <div key={date.toString()} className={`week-day-col ${isToday ? 'today' : ''}`} onClick={() => handleDaySelect(date)}>
               <div className="week-day-header">
                 <span className="day-name">{dayNames[date.getDay()]}</span>
                 <span className="day-num">{date.getDate()}</span>
               </div>
               <div className="week-day-events">
                 {tareasDia.map(tarea => (
-                  <div key={tarea.id} className={`calendar-event-card status-${tarea.estado}`} onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }}>
+                  <div key={tarea.id} className={`calendar-event-card status-${tarea.estado}`} onClick={(e) => { e.stopPropagation(); handleTaskClick(tarea); }}>
                     <h5>{tarea.titulo}</h5>
-                    <div className="event-actions-mini">
-                      <FaEdit onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }} />
-                      <FaTrash onClick={(e) => { e.stopPropagation(); handleDelete(tarea.id); }} />
-                    </div>
                   </div>
                 ))}
               </div>
@@ -269,33 +280,50 @@ const AdminBitacora = () => {
     return (
       <div className="calendar-day-view">
         <div className="day-view-header">
-          <h3>{dayNames[currentDate.getDay()]}, {currentDate.getDate()} de {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+          <div className="day-header-left">
+            <h3>{dayNames[currentDate.getDay()]}, {currentDate.getDate()} de {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+            <p className="day-stats">{tareasDia.length} {tareasDia.length === 1 ? 'tarea asignada' : 'tareas asignadas'}</p>
+          </div>
+          <button className="btn-primary create-day-btn" onClick={() => openCreateModal(currentDate)}>
+            <FaPlus /> Nueva Tarea
+          </button>
         </div>
         <div className="day-tasks-list">
           {tareasDia.length === 0 ? (
-            <p className="no-tasks-msg">No hay tareas para este día.</p>
+            <div className="empty-day-state">
+              <FaTasks className="empty-icon" />
+              <p>No hay tareas programadas para este día.</p>
+              <button className="btn-secondary" onClick={() => openCreateModal(currentDate)}>Comenzar a planificar</button>
+            </div>
           ) : (
             tareasDia.map(tarea => (
-              <div key={tarea.id} className={`day-task-detail status-${tarea.estado}`} onClick={() => handleEdit(tarea)}>
+              <div key={tarea.id} className={`day-task-detail status-${tarea.estado}`} onClick={() => handleTaskClick(tarea)}>
                 <div className="task-main-info">
-                  <h4>{tarea.titulo}</h4>
+                  <div className="task-title-row">
+                    <span className={`status-badge status-${tarea.estado}`}></span>
+                    <h4>{tarea.titulo}</h4>
+                  </div>
                   <div className="task-html-desc" dangerouslySetInnerHTML={{ __html: tarea.descripcion }}></div>
 
                   {/* Evidence Display for Admin */}
                   {(tarea.evidencia_inicial_url || tarea.evidencia_final_url) && (
-                    <div className="admin-evidence-box" style={{ marginTop: '10px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                      <p style={{ fontSize: '0.85rem', marginBottom: '5px', opacity: 0.8 }}>📋 Evidencias:</p>
-                      <div style={{ display: 'flex', gap: '15px' }}>
+                    <div className="admin-evidence-box">
+                      <p className="evidence-label">📋 Evidencias recibidas:</p>
+                      <div className="evidence-grid">
                         {tarea.evidencia_inicial_url && (
                           <div className="ev-item">
-                            <a href={tarea.evidencia_inicial_url} target="_blank" rel="noreferrer" style={{ color: '#ffd700', textDecoration: 'none', fontSize: '0.85rem' }}>📂 Inicio</a>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '5px' }}>({formatFechaEvidencia(tarea.evidencia_inicial_fecha)})</span>
+                            <a href={tarea.evidencia_inicial_url} target="_blank" rel="noreferrer" className="ev-link start">
+                              <FaFileAlt /> Inicio
+                            </a>
+                            <span className="ev-date">{formatFechaEvidencia(tarea.evidencia_inicial_fecha)}</span>
                           </div>
                         )}
                         {tarea.evidencia_final_url && (
                           <div className="ev-item">
-                            <a href={tarea.evidencia_final_url} target="_blank" rel="noreferrer" style={{ color: '#4caf50', textDecoration: 'none', fontSize: '0.85rem' }}>📂 Cierre</a>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '5px' }}>({formatFechaEvidencia(tarea.evidencia_final_fecha)})</span>
+                            <a href={tarea.evidencia_final_url} target="_blank" rel="noreferrer" className="ev-link end">
+                              <FaFileAlt /> Cierre
+                            </a>
+                            <span className="ev-date">{formatFechaEvidencia(tarea.evidencia_final_fecha)}</span>
                           </div>
                         )}
                       </div>
@@ -303,8 +331,8 @@ const AdminBitacora = () => {
                   )}
                 </div>
                 <div className="task-actions-large">
-                  <button className="btn-edit" onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }}><FaEdit /> Editar</button>
-                  <button className="btn-delete" onClick={(e) => { e.stopPropagation(); handleDelete(tarea.id); }}><FaTrash /> Eliminar</button>
+                  <button className="btn-icon-round edit" onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }} title="Editar"><FaEdit /></button>
+                  <button className="btn-icon-round delete" onClick={(e) => { e.stopPropagation(); handleDelete(tarea.id); }} title="Eliminar"><FaTrash /></button>
                 </div>
               </div>
             ))
@@ -399,17 +427,20 @@ const AdminBitacora = () => {
                   <div className="row-icon"><FaUsers /></div>
                   <div className="row-content">
                     <label>Asistentes:</label>
-                    <div className="outlook-user-selector">
+                    <div className="user-selection-panel">
                       {loadingUsuarios ? (
-                        <div className="spinner-mini"></div>
+                        <div className="loading-users">
+                          <div className="spinner-mini"></div>
+                          <span>Cargando usuarios...</span>
+                        </div>
                       ) : (
-                        <div className="outlook-users-list">
+                        <div className="users-grid-selector">
                           {usuarios.map((u) => {
                             const isSelected = formData.asignados.includes(u.id);
                             return (
                               <div
                                 key={u.id}
-                                className={`outlook-user-chip ${isSelected ? 'selected' : ''}`}
+                                className={`user-chip-item ${isSelected ? 'active' : ''}`}
                                 onClick={() => {
                                   const asignados = isSelected
                                     ? formData.asignados.filter(id => id !== u.id)
@@ -417,7 +448,12 @@ const AdminBitacora = () => {
                                   setFormData({ ...formData, asignados });
                                 }}
                               >
-                                {u.nombre}
+                                <div className="user-avatar-mini">{getInitials(u.nombre)}</div>
+                                <div className="user-info-mini">
+                                  <span className="user-name-mini">{u.nombre}</span>
+                                  <span className="user-role-mini-label">{u.rol || "Colaborador"}</span>
+                                </div>
+                                {isSelected && <div className="user-check-icon">✓</div>}
                               </div>
                             );
                           })}
@@ -483,6 +519,83 @@ const AdminBitacora = () => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDayPanel && selectedDay && (
+        <div className="modal-overlay day-panel-overlay" onClick={() => setShowDayPanel(false)}>
+          <div className="day-panel-content" onClick={e => e.stopPropagation()}>
+            <div className="day-panel-header">
+              <div className="header-info">
+                <h3>Tareas del {selectedDay.getDate()} de {monthNames[selectedDay.getMonth()]}</h3>
+                <p>{tareas.filter(t => isSameDay(new Date(t.deadline), selectedDay)).length} tareas programadas</p>
+              </div>
+              <button className="btn-close-panel" onClick={() => setShowDayPanel(false)}>×</button>
+            </div>
+
+            <div className="day-panel-body">
+              <button className="btn-primary add-task-panel-btn" onClick={() => openCreateModal(selectedDay)}>
+                <FaPlus /> Crear Nueva Tarea para hoy
+              </button>
+
+              <div className="panel-tasks-list">
+                {tareas.filter(t => isSameDay(new Date(t.deadline), selectedDay)).length === 0 ? (
+                  <div className="panel-empty-state">
+                    <FaTasks />
+                    <p>No tienes tareas para este día.</p>
+                  </div>
+                ) : (
+                  tareas.filter(t => isSameDay(new Date(t.deadline), selectedDay)).map(tarea => (
+                    <div key={tarea.id} className={`panel-task-item status-${tarea.estado}`} onClick={() => handleTaskClick(tarea)}>
+                      <div className="panel-task-main">
+                        <div className="panel-task-header">
+                          <span className={`panel-status-dot status-${tarea.estado}`}></span>
+                          <h4>{tarea.titulo}</h4>
+                        </div>
+                        <div className="panel-task-desc" dangerouslySetInnerHTML={{ __html: tarea.descripcion }}></div>
+
+                        {(tarea.evidencia_inicial_url || tarea.evidencia_final_url) && (
+                          <div className="panel-evidence-badges">
+                            {tarea.evidencia_inicial_url && <span className="p-badge start">📂 Inicio OK</span>}
+                            {tarea.evidencia_final_url && <span className="p-badge end">📂 Cierre OK</span>}
+                          </div>
+                        )}
+                      </div>
+                      <div className="panel-task-actions">
+                        <button className="p-action-btn edit" onClick={(e) => { e.stopPropagation(); handleEdit(tarea); }}><FaEdit /></button>
+                        <button className="p-action-btn delete" onClick={(e) => { e.stopPropagation(); handleDelete(tarea.id); }}><FaTrash /></button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOptionsModal && selectedTaskForOptions && (
+        <div className="modal-overlay op-modal-overlay" onClick={() => setShowOptionsModal(false)}>
+          <div className="options-modal" onClick={e => e.stopPropagation()}>
+            <div className="options-modal-header">
+              <div className={`status-pill status-${selectedTaskForOptions.estado}`}></div>
+              <h3>{selectedTaskForOptions.titulo}</h3>
+              <button className="close-op" onClick={() => setShowOptionsModal(false)}>×</button>
+            </div>
+            <div className="options-modal-body">
+              <button className="op-btn edit" onClick={() => handleEdit(selectedTaskForOptions)}>
+                <FaEdit />
+                <span>Editar Tarea</span>
+              </button>
+              <button className="op-btn delete" onClick={() => {
+                handleDelete(selectedTaskForOptions.id);
+                setShowOptionsModal(false);
+              }}>
+                <FaTrash />
+                <span>Eliminar Tarea</span>
+              </button>
             </div>
           </div>
         </div>

@@ -1,20 +1,29 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpenCheck, ClipboardList, Users2, BarChart3, User } from "lucide-react";
-import { FaGraduationCap, FaClipboardList, FaUser, FaBell, FaFileAlt } from "react-icons/fa";
+import { BookOpenCheck, ClipboardList, Users2, BarChart3 } from "lucide-react";
+import { FaGraduationCap, FaClipboardList, FaUser, FaBell, FaFileAlt, FaHistory } from "react-icons/fa";
+import MyRequestsModal from "../components/MyRequestsModal";
 import "./Home.css";
 
 const Home = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "null");
-  
+
   if (!user || !user.rol) {
     navigate("/login");
     return null;
   }
-  
+
   const isAdmin = user.rol === "Admin" || user.rol === "Administrador";
   const isSuperAdmin = user.rol === "SuperAdmin" || user.rol_detallado === "SuperAdmin";
+  const [isRequestsModalOpen, setIsRequestsModalOpen] = React.useState(false);
+
+  const myRequestsCard = {
+    title: "Mis Solicitudes",
+    icon: <FaHistory size={36} color="#9b59b6" />,
+    description: "Seguimiento de tus archivos y cursos enviados.",
+    action: () => setIsRequestsModalOpen(true),
+  };
 
   // Tarjetas para SuperAdmin
   const superAdminCards = [
@@ -32,7 +41,7 @@ const Home = () => {
     },
     {
       title: "Bitácora",
-      icon: <ClipboardList size={36} color="#43e97b" />,
+      icon: <FaClipboardList size={36} color="#43e97b" />,
       description: "Gestiona tareas y seguimiento de actividades.",
       route: "/AdminBitacora",
     },
@@ -50,7 +59,7 @@ const Home = () => {
     },
     {
       title: "Perfil",
-      icon: <User size={36} color="#607d8b" />,
+      icon: <FaUser size={36} color="#607d8b" />,
       description: "Ver y editar tu perfil de administrador.",
       route: "/perfil",
     },
@@ -59,7 +68,7 @@ const Home = () => {
       icon: <FaFileAlt size={36} color="#2962ff" />,
       description: "Accede a los documentos de la empresa.",
       route: "/admin-documentos",
-    },
+    }
   ];
 
   // Tarjetas para admin
@@ -72,7 +81,7 @@ const Home = () => {
     },
     {
       title: "Bitácora",
-      icon: <ClipboardList size={36} color="#43e97b" />,
+      icon: <FaClipboardList size={36} color="#43e97b" />,
       description: "Gestiona tareas y seguimiento de actividades.",
       route: "/AdminBitacora",
     },
@@ -90,7 +99,7 @@ const Home = () => {
     },
     {
       title: "Perfil",
-      icon: <User size={36} color="#607d8b" />,
+      icon: <FaUser size={36} color="#607d8b" />,
       description: "Ver y editar tu perfil de administrador.",
       route: "/perfil",
     },
@@ -100,6 +109,7 @@ const Home = () => {
       description: "Accede a los documentos de la empresa.",
       route: "/admin-documentos",
     },
+    myRequestsCard
   ];
 
   // Tarjetas para usuario normal
@@ -128,6 +138,7 @@ const Home = () => {
       description: "Accede a los documentos de la empresa.",
       route: "/documentos",
     },
+    myRequestsCard
   ];
 
   const cards = isSuperAdmin ? superAdminCards : (isAdmin ? adminCards : userCards);
@@ -143,7 +154,7 @@ const Home = () => {
           <div
             key={idx}
             className="home-dashboard-card"
-            onClick={() => navigate(card.route)}
+            onClick={() => card.action ? card.action() : navigate(card.route)}
             style={{ cursor: 'pointer' }}
           >
             <div className="home-dashboard-icon">{card.icon}</div>
@@ -152,8 +163,9 @@ const Home = () => {
           </div>
         ))}
       </div>
+      <MyRequestsModal isOpen={isRequestsModalOpen} onClose={() => setIsRequestsModalOpen(false)} />
     </div>
   );
 };
 
-export default Home; 
+export default Home;

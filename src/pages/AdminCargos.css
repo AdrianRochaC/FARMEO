@@ -122,7 +122,8 @@
   gap: 0.5rem;
 }
 
-.btn-edit, .btn-delete {
+.btn-edit,
+.btn-delete {
   background: none;
   border: none;
   padding: 0.5rem;
@@ -220,6 +221,16 @@
 .btn-edit-task:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn-delete-task {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.btn-delete-task:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 .click-hint {
@@ -367,13 +378,18 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
   animation: shimmer 2s infinite;
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .progress-text {
@@ -404,8 +420,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .no-metrics {
@@ -622,7 +643,8 @@
 .dropdown-item.existing-disabled {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
   border-left: 3px solid #f59e0b;
-  background-color: rgba(245, 158, 11, 0.2); /* More prominent yellow */
+  background-color: rgba(245, 158, 11, 0.2);
+  /* More prominent yellow */
 }
 
 .dropdown-item.available:hover {
@@ -631,7 +653,8 @@
 
 .dropdown-item.existing-disabled:hover {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
-  background-color: rgba(245, 158, 11, 0.25); /* More prominent yellow on hover */
+  background-color: rgba(245, 158, 11, 0.25);
+  /* More prominent yellow on hover */
 }
 
 .cargo-description {
@@ -655,24 +678,24 @@
   .admin-cargos-container {
     padding: 1rem;
   }
-  
+
   .cargos-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .cargo-card {
     padding: 1rem;
   }
-  
+
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .form-actions {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .btn-primary,
   .btn-secondary {
     width: 100%;
@@ -681,19 +704,19 @@
     font-size: 0.95rem;
     min-width: 100%;
   }
-  
+
   .dropdown-list {
     max-height: 250px;
   }
-  
+
   .dropdown-item {
     padding: 10px 12px;
   }
-  
+
   .cargo-name {
     font-size: 0.9rem;
   }
-  
+
   .cargo-description {
     font-size: 0.8rem;
   }

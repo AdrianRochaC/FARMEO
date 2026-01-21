@@ -723,6 +723,17 @@ app.post('/api/documents', verifyToken, documentUpload.single('document'), async
             `Nuevo documento pendiente de aprobación: ${req.file.originalname}`
           ]
         );
+        // También insertar en la tabla de notificaciones para la campana de la UI
+        await connection.execute(
+          `INSERT INTO notifications (user_id, message, type, data)
+           VALUES (?, ?, ?, ?)`,
+          [
+            superAdmin.id,
+            `Nuevo documento pendiente de aprobación: ${req.file.originalname}`,
+            'nueva_solicitud',
+            JSON.stringify({ requesterId: req.user.id, type: 'documento', fileName: req.file.originalname })
+          ]
+        );
       }
 
       await connection.end();
@@ -2077,6 +2088,17 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
             `Nuevo curso pendiente de aprobación: ${title}`
           ]
         );
+        // También insertar en la tabla de notificaciones para la campana de la UI
+        await connection.execute(
+          `INSERT INTO notifications (user_id, message, type, data)
+           VALUES (?, ?, ?, ?)`,
+          [
+            superAdmin.id,
+            `Nuevo curso pendiente de aprobación: ${title}`,
+            'nueva_solicitud',
+            JSON.stringify({ requesterId: req.user.id, type: 'curso', title })
+          ]
+        );
       }
 
       await connection.end();
@@ -2577,10 +2599,18 @@ app.get('/api/bitacora', verifyToken, async (req, res) => {
               asignados
             );
 
+            // Verificar si hay alguna solicitud de carga pendiente para esta tarea y este usuario
+            const [pendingRequests] = await connection.execute(
+              `SELECT id FROM solicitudes_de_carga 
+               WHERE usuario_id = ? AND estado = 'pendiente' AND descripcion LIKE ?`,
+              [req.user.id, `%Tarea ID: ${tarea.id}%`]
+            );
+
             // Crear objeto con información de usuarios asignados
             const tareaConUsuarios = {
               ...tarea,
-              usuariosAsignados: usuariosAsignados
+              usuariosAsignados: usuariosAsignados,
+              pendiente_aprobacion: pendingRequests.length > 0
             };
 
             tareasFiltradas.push(tareaConUsuarios);
@@ -2902,7 +2932,7 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
       });
     } else {
       // Empleados deben esperar aprobación - crear solicitud
-      const descripcion = `Evidencia de ${tipoEvidencia} para bitácora - Tarea ID: ${tareaId} - ${tarea.titulo}`;
+      const descripcion = `Evidencia de bitacora | Tarea ID: ${tareaId} | Tipo: ${tipoEvidencia} | Titulo: ${tarea.titulo}`;
 
       await connection.execute(
         `INSERT INTO solicitudes_de_carga 
@@ -2930,6 +2960,17 @@ app.post('/api/bitacora/:id/evidence', verifyToken, documentUpload.single('evide
             userId,
             superAdmin.id,
             `Nueva evidencia de bitácora pendiente de aprobación: ${tarea.titulo}`
+          ]
+        );
+        // También insertar en la tabla de notificaciones para la campana de la UI
+        await connection.execute(
+          `INSERT INTO notifications (user_id, message, type, data)
+           VALUES (?, ?, ?, ?)`,
+          [
+            superAdmin.id,
+            `Nueva evidencia de bitácora pendiente de aprobación: ${tarea.titulo}`,
+            'nueva_solicitud',
+            JSON.stringify({ requesterId: userId, type: 'bitacora', tareaId: tarea.id, titulo: tarea.titulo })
           ]
         );
       }
@@ -4264,6 +4305,51 @@ app.get('/api/aprobaciones/test', verifyToken, async (req, res) => {
   });
 });
 
+// Endpoint para que los usuarios vean sus propias solicitudes
+app.get('/api/my-solicitudes', verifyToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const [solicitudes] = await connection.execute(
+      `SELECT * FROM solicitudes_de_carga WHERE usuario_id = ? ORDER BY created_at DESC LIMIT 50`,
+      [req.user.id]
+    );
+    await connection.end();
+    res.json({ success: true, solicitudes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error al obtener tus solicitudes' });
+  }
+});
+
+// Endpoint para que los usuarios eliminen sus propias solicitudes pendientes
+app.delete('/api/solicitudes/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connection = await createConnection();
+
+    // Verificar propiedad y estado
+    const [rows] = await connection.execute(
+      'SELECT id, estado FROM solicitudes_de_carga WHERE id = ? AND usuario_id = ?',
+      [id, req.user.id]
+    );
+
+    if (rows.length === 0) {
+      await connection.end();
+      return res.status(404).json({ success: false, message: 'Solicitud no encontrada' });
+    }
+
+    if (rows[0].estado !== 'pendiente') {
+      await connection.end();
+      return res.status(400).json({ success: false, message: 'No puedes eliminar una solicitud ya procesada' });
+    }
+
+    await connection.execute('DELETE FROM solicitudes_de_carga WHERE id = ?', [id]);
+    await connection.end();
+    res.json({ success: true, message: 'Solicitud eliminada' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error al eliminar solicitud' });
+  }
+});
+
 // Endpoint para listar solicitudes de aprobación
 app.get('/api/aprobaciones', verifyToken, verifySuperAdmin, async (req, res) => {
   try {
@@ -4372,9 +4458,10 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
     const descripcion = solicitud.descripcion || '';
 
     if (descripcion.includes('bitacora')) {
-      // Extraer tareaId de la descripción o usar un campo adicional
-      const tareaIdMatch = descripcion.match(/tarea[_\s]*id[:\s]*(\d+)/i);
-      const tipoEvidencia = descripcion.includes('inicio') ? 'inicio' : 'cierre';
+      // Extraer tareaId y tipo de la descripción estandarizada
+      const tareaIdMatch = descripcion.match(/Tarea ID:\s*(\d+)/i);
+      const tipoMatch = descripcion.match(/Tipo:\s*(inicio|cierre)/i);
+      const tipoEvidencia = tipoMatch ? tipoMatch[1].toLowerCase() : (descripcion.includes('inicio') ? 'inicio' : 'cierre');
 
       if (tareaIdMatch) {
         const tareaId = tareaIdMatch[1];
@@ -4521,6 +4608,17 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
         `Tu solicitud de ${solicitud.tipo_contenido} ha sido aprobada.`
       ]
     );
+    // Notificación para la UI
+    await connection.execute(
+      `INSERT INTO notifications (user_id, message, type, data)
+       VALUES (?, ?, ?, ?)`,
+      [
+        solicitud.usuario_id,
+        `Tu solicitud de ${solicitud.tipo_contenido} ha sido aprobada.`,
+        'solicitud_aprobada',
+        JSON.stringify({ type: solicitud.tipo_contenido, comment: comentario || '' })
+      ]
+    );
 
     await connection.end();
     res.json({
@@ -4594,6 +4692,17 @@ app.post('/api/aprobaciones/:id/rechazar', verifyToken, verifySuperAdmin, async 
         req.user.id,
         solicitud.usuario_id,
         `Tu solicitud de ${solicitud.tipo_contenido} ha sido rechazada. Comentario: ${comentario}`
+      ]
+    );
+    // Notificación para la UI
+    await connection.execute(
+      `INSERT INTO notifications (user_id, message, type, data)
+       VALUES (?, ?, ?, ?)`,
+      [
+        solicitud.usuario_id,
+        `Tu solicitud de ${solicitud.tipo_contenido} ha sido rechazada.`,
+        'solicitud_rechazada',
+        JSON.stringify({ type: solicitud.tipo_contenido, comment: comentario })
       ]
     );
 
