@@ -18,16 +18,22 @@
   color: var(--text-primary);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-heavy);
-  min-width: 400px;
-  max-width: 90vw;
-  width: 600px;
-  max-height: 85vh;
+  min-width: 500px;
+  max-width: 95vw;
+  width: 900px;
+  max-height: 90vh;
   padding: 0;
   animation: modalIn 0.3s cubic-bezier(.4, 0, .2, 1) both;
   border: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.modal-window.modal-xl {
+  width: 1200px;
+  max-width: 98vw;
+  max-height: 95vh;
 }
 
 @keyframes modalIn {

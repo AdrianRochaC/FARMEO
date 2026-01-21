@@ -265,11 +265,11 @@ const AdminCoursesPage = () => {
       if (!isMounted.current) return;
 
       if (data.success) {
-        fetchCourses();
+        if (!data.pendiente_aprobacion) fetchCourses();
         resetForm();
 
         // Mostrar mensaje igual que documentos
-        let message = editingCourse ? "Curso actualizado exitosamente" : "Curso creado exitosamente";
+        let message = editingCourse ? "Curso actualizado exitosamente" : (data.pendiente_aprobacion ? "Curso enviado para aprobación. El SuperAdmin lo revisará." : "Curso creado exitosamente");
         if (data.cloudinaryUrl) {
           message += " - Video subido exitosamente a Cloudinary";
         }
@@ -279,7 +279,7 @@ const AdminCoursesPage = () => {
             setShowModal(false);
             setUploadSuccess('');
           }
-        }, 2000);
+        }, 2500);
       } else {
         const errorMsg = data.message || data.error || 'Error al crear el curso';
         setUploadError(errorMsg);

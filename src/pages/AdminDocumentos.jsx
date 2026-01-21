@@ -9,11 +9,11 @@ const API_URL = BACKEND_URL;
 // Función para convertir tipos MIME a nombres amigables
 const getFriendlyMimeType = (mimetype) => {
   if (!mimetype) return 'Desconocido';
-  
+
   const mimeParts = mimetype.split('/');
   const type = mimeParts[0];
   const subtype = mimeParts[1];
-  
+
   // Mapeo de tipos MIME a nombres amigables
   const mimeMap = {
     'application/pdf': 'PDF',
@@ -27,12 +27,12 @@ const getFriendlyMimeType = (mimetype) => {
     'text/plain': 'Texto',
     'text/csv': 'CSV'
   };
-  
+
   // Si está en el mapa, devolver el nombre amigable
   if (mimeMap[mimetype]) {
     return mimeMap[mimetype];
   }
-  
+
   // Si no está en el mapa, devolver el subtipo en mayúsculas (sin el prefijo vnd.)
   if (subtype) {
     // Limpiar prefijos comunes
@@ -44,15 +44,15 @@ const getFriendlyMimeType = (mimetype) => {
       .replace(/presentationml\.presentation$/, 'PowerPoint')
       .replace(/msword$/, 'Word')
       .replace(/ms-excel$/, 'Excel');
-    
+
     // Si después de limpiar sigue siendo muy largo, usar solo la primera parte
     if (cleanSubtype.length > 15) {
       cleanSubtype = cleanSubtype.split('.')[0];
     }
-    
+
     return cleanSubtype.toUpperCase();
   }
-  
+
   return type.toUpperCase();
 };
 
@@ -107,12 +107,12 @@ const AdminDocumentos = () => {
         if (!response.ok) {
           throw new Error('Error al descargar el archivo');
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        
+
         // Obtener la extensión del archivo desde el mimetype o el nombre
         let extension = '';
         if (doc.mimetype) {
@@ -131,11 +131,11 @@ const AdminDocumentos = () => {
             }
           }
         }
-        
+
         // Usar el nombre del documento con la extensión correcta
         const fileName = doc.name.endsWith(extension) ? doc.name : doc.name + extension;
         link.download = fileName;
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -160,23 +160,23 @@ const AdminDocumentos = () => {
     setLoadingUsers(true);
     try {
       const token = localStorage.getItem('authToken');
-      
+
       // Obtener cargos de la base de datos
       const cargosRes = await fetch(`${API_URL}/api/cargos`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const cargosData = await cargosRes.json();
-      
+
       if (cargosData.success) {
         // Extraer solo los nombres de los cargos y filtrar admin/Admin del sistema
         const rolesFromDB = cargosData.cargos
           .map(cargo => cargo.nombre)
           .filter(rol => {
             const rolLower = rol.toLowerCase();
-            return rolLower !== 'admin' && 
-                   rolLower !== 'admin del sistema' &&
-                   rolLower !== 'administrador' &&
-                   rolLower !== 'administrador del sistema';
+            return rolLower !== 'admin' &&
+              rolLower !== 'admin del sistema' &&
+              rolLower !== 'administrador' &&
+              rolLower !== 'administrador del sistema';
           });
         setRoles(rolesFromDB);
       }
@@ -249,15 +249,15 @@ const AdminDocumentos = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setUploadSuccess('Documento subido exitosamente a Cloudinary');
+        setUploadSuccess(data.pendiente_aprobacion ? 'Documento enviado para aprobación. El SuperAdmin lo revisará.' : 'Documento subido exitosamente a Cloudinary');
         setFile(null);
         setSelectedRoles([]);
         setIsGlobal(false);
-        fetchDocuments();
+        if (!data.pendiente_aprobacion) fetchDocuments();
         setTimeout(() => {
           setModalOpen(false);
           setUploadSuccess('');
-        }, 1200);
+        }, 2500);
       } else {
         setUploadError(data.message || 'Error al subir documento');
       }
@@ -394,17 +394,17 @@ const AdminDocumentos = () => {
         flexDirection: 'column',
         gap: 32
       }}>
-        <div className="header-row" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
+        <div className="header-row" style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           marginBottom: 24,
           paddingBottom: '20px',
           borderBottom: '2px solid var(--border-color)'
         }}>
-          <h1 style={{ 
-            fontSize: 32, 
-            fontWeight: 700, 
+          <h1 style={{
+            fontSize: 32,
+            fontWeight: 700,
             margin: 0,
             background: 'var(--gradient-primary)',
             backgroundClip: 'text',
@@ -414,8 +414,8 @@ const AdminDocumentos = () => {
           }}>
             📚 Gestión de Documentos
           </h1>
-          <button 
-            className="btn-primary" 
+          <button
+            className="btn-primary"
             onClick={() => setModalOpen(true)}
             style={{
               background: 'var(--gradient-primary)',
@@ -448,9 +448,9 @@ const AdminDocumentos = () => {
         <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Subir documento">
           <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ 
-                fontWeight: 600, 
-                color: 'var(--text-primary)', 
+              <label style={{
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 marginBottom: '8px',
                 display: 'block',
                 fontSize: '0.95rem'
@@ -462,7 +462,7 @@ const AdminDocumentos = () => {
                 accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={handleFileChange}
                 disabled={uploading}
-                style={{ 
+                style={{
                   width: '100%',
                   padding: '12px',
                   background: 'var(--bg-secondary)',
@@ -494,9 +494,9 @@ const AdminDocumentos = () => {
             </div>
             {/* Multi-select visual de roles */}
             <div className="doc-multiselect-section">
-              <label style={{ 
-                fontWeight: 600, 
-                color: 'var(--text-primary)', 
+              <label style={{
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 marginBottom: '8px',
                 display: 'block',
                 fontSize: '0.95rem'
@@ -515,8 +515,8 @@ const AdminDocumentos = () => {
                   </span>
                 ))}
                 {roles.length === 0 && (
-                  <span style={{ 
-                    color: 'var(--text-muted)', 
+                  <span style={{
+                    color: 'var(--text-muted)',
                     fontSize: '0.85rem',
                     fontStyle: 'italic',
                     padding: '8px 12px',
@@ -530,8 +530,8 @@ const AdminDocumentos = () => {
               </div>
             </div>
             {uploadError && (
-              <div style={{ 
-                color: '#dc2626', 
+              <div style={{
+                color: '#dc2626',
                 marginBottom: 8,
                 padding: '12px',
                 background: 'rgba(220, 38, 38, 0.1)',
@@ -544,8 +544,8 @@ const AdminDocumentos = () => {
               </div>
             )}
             {uploadSuccess && (
-              <div style={{ 
-                color: '#16a34a', 
+              <div style={{
+                color: '#16a34a',
                 marginBottom: 8,
                 padding: '12px',
                 background: 'rgba(22, 163, 74, 0.1)',
@@ -585,20 +585,20 @@ const AdminDocumentos = () => {
         <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title="Editar documento">
           <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ 
-                fontWeight: 600, 
-                color: 'var(--text-primary)', 
+              <label style={{
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 marginBottom: '8px',
                 display: 'block',
                 fontSize: '0.95rem'
               }}>
                 Nombre del documento:
               </label>
-              <input 
-                type="text" 
-                value={editName} 
-                onChange={e => setEditName(e.target.value)} 
-                style={{ 
+              <input
+                type="text"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                style={{
                   width: '100%',
                   padding: '12px',
                   background: 'var(--bg-secondary)',
@@ -606,24 +606,24 @@ const AdminDocumentos = () => {
                   borderRadius: '8px',
                   color: 'var(--text-primary)',
                   fontSize: '0.9rem'
-                }} 
+                }}
               />
             </div>
-            
+
             <div>
-              <label style={{ 
-                fontWeight: 600, 
-                color: 'var(--text-primary)', 
+              <label style={{
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 marginBottom: '8px',
                 display: 'block',
                 fontSize: '0.95rem'
               }}>
                 Reemplazar archivo (opcional):
               </label>
-              <input 
-                type="file" 
-                onChange={handleEditFileChange} 
-                style={{ 
+              <input
+                type="file"
+                onChange={handleEditFileChange}
+                style={{
                   width: '100%',
                   padding: '12px',
                   background: 'var(--bg-secondary)',
@@ -631,7 +631,7 @@ const AdminDocumentos = () => {
                   borderRadius: '8px',
                   color: 'var(--text-primary)',
                   fontSize: '0.9rem'
-                }} 
+                }}
               />
             </div>
             <div className="doc-checkbox-row" style={{ marginBottom: 18 }}>
@@ -653,9 +653,9 @@ const AdminDocumentos = () => {
               </label>
             </div>
             <div className="doc-multiselect-section">
-              <label style={{ 
-                fontWeight: 600, 
-                color: 'var(--text-primary)', 
+              <label style={{
+                fontWeight: 600,
+                color: 'var(--text-primary)',
                 marginBottom: '8px',
                 display: 'block',
                 fontSize: '0.95rem'
@@ -674,8 +674,8 @@ const AdminDocumentos = () => {
                   </span>
                 ))}
                 {roles.length === 0 && (
-                  <span style={{ 
-                    color: 'var(--text-muted)', 
+                  <span style={{
+                    color: 'var(--text-muted)',
                     fontSize: '0.85rem',
                     fontStyle: 'italic',
                     padding: '8px 12px',
@@ -688,10 +688,10 @@ const AdminDocumentos = () => {
                 )}
               </div>
             </div>
-            
+
             {uploadError && (
-              <div style={{ 
-                color: '#dc2626', 
+              <div style={{
+                color: '#dc2626',
                 marginBottom: 8,
                 padding: '12px',
                 background: 'rgba(220, 38, 38, 0.1)',
@@ -704,8 +704,8 @@ const AdminDocumentos = () => {
               </div>
             )}
             {uploadSuccess && (
-              <div style={{ 
-                color: '#16a34a', 
+              <div style={{
+                color: '#16a34a',
                 marginBottom: 8,
                 padding: '12px',
                 background: 'rgba(22, 163, 74, 0.1)',
@@ -743,7 +743,7 @@ const AdminDocumentos = () => {
 
         {/* Mensajes globales de éxito/error */}
         {uploadSuccess && (
-          <div style={{ 
+          <div style={{
             position: 'fixed',
             top: '20px',
             right: '20px',
@@ -760,7 +760,7 @@ const AdminDocumentos = () => {
           </div>
         )}
         {uploadError && (
-          <div style={{ 
+          <div style={{
             position: 'fixed',
             top: '20px',
             right: '20px',
@@ -778,9 +778,9 @@ const AdminDocumentos = () => {
         )}
 
         <div className="document-list-section">
-          <h2 style={{ 
-            marginBottom: 24, 
-            fontSize: 24, 
+          <h2 style={{
+            marginBottom: 24,
+            fontSize: 24,
             fontWeight: 600,
             color: 'var(--text-primary)',
             display: 'flex',
@@ -891,8 +891,8 @@ const AdminDocumentos = () => {
             </div>
           )}
           {loadingDocs ? (
-            <div style={{ 
-              padding: 48, 
+            <div style={{
+              padding: 48,
               textAlign: 'center',
               color: 'var(--text-muted)',
               fontSize: '1.1rem',
@@ -912,9 +912,9 @@ const AdminDocumentos = () => {
               Cargando documentos...
             </div>
           ) : filteredDocuments.length === 0 && searchTerm ? (
-            <div style={{ 
-              padding: 48, 
-              textAlign: 'center', 
+            <div style={{
+              padding: 48,
+              textAlign: 'center',
               color: 'var(--text-muted)',
               fontSize: '1.1rem',
               display: 'flex',
@@ -929,8 +929,8 @@ const AdminDocumentos = () => {
                 🔍
               </div>
               <p style={{ margin: 0 }}>No se encontraron documentos</p>
-              <p style={{ 
-                margin: 0, 
+              <p style={{
+                margin: 0,
                 fontSize: '0.9rem',
                 opacity: 0.7
               }}>
@@ -954,9 +954,9 @@ const AdminDocumentos = () => {
               </button>
             </div>
           ) : documents.length === 0 ? (
-            <div style={{ 
-              padding: 48, 
-              textAlign: 'center', 
+            <div style={{
+              padding: 48,
+              textAlign: 'center',
               color: 'var(--text-muted)',
               fontSize: '1.1rem',
               display: 'flex',
@@ -971,8 +971,8 @@ const AdminDocumentos = () => {
                 📁
               </div>
               <p style={{ margin: 0 }}>No hay documentos subidos</p>
-              <p style={{ 
-                margin: 0, 
+              <p style={{
+                margin: 0,
                 fontSize: '0.9rem',
                 opacity: 0.7
               }}>
@@ -981,21 +981,21 @@ const AdminDocumentos = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table className="document-table" style={{ 
-                width: '100%', 
-                borderCollapse: 'separate', 
-                borderSpacing: 0, 
-                background: 'var(--bg-primary, #18181b)', 
-                borderRadius: 16, 
-                overflow: 'hidden', 
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
-                border: '1px solid var(--border-color, #333)' 
+              <table className="document-table" style={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                background: 'var(--bg-primary, #18181b)',
+                borderRadius: 16,
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                border: '1px solid var(--border-color, #333)'
               }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-secondary, #23232b)' }}>
-                    <th style={{ 
-                      padding: '16px 12px', 
-                      textAlign: 'left', 
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       fontSize: '0.95rem',
@@ -1003,9 +1003,9 @@ const AdminDocumentos = () => {
                     }}>
                       Nombre
                     </th>
-                    <th style={{ 
-                      padding: '16px 12px', 
-                      textAlign: 'left', 
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       fontSize: '0.95rem',
@@ -1013,9 +1013,9 @@ const AdminDocumentos = () => {
                     }}>
                       Tipo
                     </th>
-                    <th style={{ 
-                      padding: '16px 12px', 
-                      textAlign: 'left', 
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       fontSize: '0.95rem',
@@ -1023,9 +1023,9 @@ const AdminDocumentos = () => {
                     }}>
                       Tamaño
                     </th>
-                    <th style={{ 
-                      padding: '16px 12px', 
-                      textAlign: 'left', 
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       fontSize: '0.95rem',
@@ -1033,9 +1033,9 @@ const AdminDocumentos = () => {
                     }}>
                       Fecha
                     </th>
-                    <th style={{ 
-                      padding: '16px 12px', 
-                      textAlign: 'left', 
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
                       fontWeight: 600,
                       color: 'var(--text-primary)',
                       fontSize: '0.95rem',
@@ -1047,47 +1047,47 @@ const AdminDocumentos = () => {
                 </thead>
                 <tbody>
                   {filteredDocuments.map((doc, index) => (
-                    <tr key={doc.id} style={{ 
+                    <tr key={doc.id} style={{
                       borderBottom: '1px solid var(--border-color, #333)',
                       background: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)',
                       transition: 'background-color 0.2s ease'
                     }}>
-                      <td style={{ 
+                      <td style={{
                         padding: '14px 12px',
                         color: 'var(--text-primary)',
                         fontWeight: '500'
                       }}>
                         {doc.name}
                       </td>
-                      <td style={{ 
+                      <td style={{
                         padding: '14px 12px',
                         color: 'var(--text-secondary)',
                         fontSize: '0.9rem'
                       }}>
                         {getFriendlyMimeType(doc.mimetype)}
                       </td>
-                      <td style={{ 
+                      <td style={{
                         padding: '14px 12px',
                         color: 'var(--text-secondary)',
                         fontSize: '0.9rem'
                       }}>
                         {(doc.size / 1024).toFixed(1)} KB
                       </td>
-                      <td style={{ 
+                      <td style={{
                         padding: '14px 12px',
                         color: 'var(--text-secondary)',
                         fontSize: '0.9rem'
                       }}>
-                        {new Date(doc.created_at).toLocaleString('es-CO', { 
+                        {new Date(doc.created_at).toLocaleString('es-CO', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
-                          hour12: false 
+                          hour12: false
                         })}
                       </td>
-                      <td style={{ 
+                      <td style={{
                         padding: '14px 12px',
                         display: 'flex',
                         gap: '8px',
@@ -1096,7 +1096,7 @@ const AdminDocumentos = () => {
                         <button
                           onClick={() => handleDownload(doc)}
                           className="btn-secondary"
-                          style={{ 
+                          style={{
                             padding: '8px 16px',
                             fontSize: '0.85rem',
                             textDecoration: 'none',
@@ -1114,9 +1114,9 @@ const AdminDocumentos = () => {
                         >
                           📄 Ver/Descargar
                         </button>
-                        <button 
-                          className="btn-edit" 
-                          title="Editar" 
+                        <button
+                          className="btn-edit"
+                          title="Editar"
                           onClick={() => openEditModal(doc)}
                           style={{
                             padding: '8px',
@@ -1130,9 +1130,9 @@ const AdminDocumentos = () => {
                         >
                           <FaEdit />
                         </button>
-                        <button 
-                          className="btn-delete" 
-                          title="Eliminar" 
+                        <button
+                          className="btn-delete"
+                          title="Eliminar"
                           onClick={() => handleDeleteDocument(doc.id, doc.name)}
                           style={{
                             padding: '8px',
