@@ -12,7 +12,7 @@ const AdminCoursesPage = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [cargoId, setCargoId] = useState(1);
+  const [selectedCargoIds, setSelectedCargoIds] = useState([]); // CAMBIO: Array para múltiples cargos
   const [cargos, setCargos] = useState([]);
   const [courses, setCourses] = useState([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
@@ -64,10 +64,7 @@ const AdminCoursesPage = () => {
               !nombreLower.includes('administrador');
           });
           setCargos(cargosFiltrados);
-          // Establecer el primer cargo como seleccionado por defecto
-          if (cargosFiltrados.length > 0) {
-            setCargoId(cargosFiltrados[0].id);
-          }
+          // CAMBIO: Ya no seleccionamos ninguno por defecto, el admin debe elegir
         }
       }
     } catch (error) {
@@ -165,6 +162,12 @@ const AdminCoursesPage = () => {
     e.preventDefault();
     if (submitting) return; // Prevenir múltiples clics
 
+    // CAMBIO: Validar que se haya seleccionado al menos un cargo
+    if (selectedCargoIds.length === 0) {
+      alert("Debes seleccionar al menos un cargo para el curso.");
+      return;
+    }
+
     // Para edición, no validar video si ya existe uno
     const hasExistingVideo = editingCourse && (videoUrl || videoFile);
     const hasNewVideo = !editingCourse && (videoUrl || videoFile);
@@ -179,10 +182,12 @@ const AdminCoursesPage = () => {
     let formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
-    formData.append("cargoId", cargoId);
+    // CAMBIO: Enviar array de IDs de cargos
+    formData.append("cargoIds", JSON.stringify(selectedCargoIds));
     formData.append("attempts", attempts);
     formData.append("timeLimit", timeLimit);
     formData.append("evaluation", JSON.stringify(questions));
+
 
 
     // Manejar video - siempre enviar algo
@@ -243,7 +248,7 @@ const AdminCoursesPage = () => {
           title,
           description,
           videoUrl: finalVideoUrl,
-          cargoId: parseInt(cargoId),
+          cargoIds: selectedCargoIds, // CAMBIO: Enviar array de IDs
           attempts: parseInt(attempts),
           timeLimit: parseInt(timeLimit),
           evaluation: questions
@@ -308,7 +313,7 @@ const AdminCoursesPage = () => {
     setVideoUrl("");
     setVideoFile(null);
     setUseFile(false);
-    setCargoId(1); // Cambiar a setCargoId y usar el ID del primer cargo por defecto
+    setSelectedCargoIds([]); // CAMBIO: Limpiar array de cargos seleccionados
     setQuestions([]);
     setAttempts(1);
     setTimeLimit(30);
@@ -553,17 +558,29 @@ const AdminCoursesPage = () => {
       setVideoUrl(videoUrl || '');
     }
 
-    // Buscar el cargo por nombre para obtener su ID
-    const cargo = cargos.find(c => c.nombre === course.role);
 
-    if (cargo) {
-      setCargoId(cargo.id);
-    } else if (cargos.length > 0) {
-      // Si no encuentra el cargo, usar el primero disponible
-      setCargoId(cargos[0].id);
-    } else {
-      alert('Error: No hay cargos disponibles');
-      return;
+    // CAMBIO: Obtener los IDs de los cargos asignados al curso
+    try {
+      const res = await fetch(`${API_URL_INTERNAL}/api/courses/${course.id}/cargos`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.cargoIds) {
+          setSelectedCargoIds(data.cargoIds);
+        } else {
+          setSelectedCargoIds([]);
+        }
+      } else {
+        // Fallback: Si el endpoint no existe aún, intentar parsear desde course.role
+        setSelectedCargoIds([]);
+      }
+    } catch (err) {
+      console.error('Error cargando cargos del curso:', err);
+      setSelectedCargoIds([]);
     }
     setAttempts(course.attempts || 1);
     setTimeLimit(course.timeLimit || course.time_limit || 30);
@@ -680,14 +697,67 @@ const AdminCoursesPage = () => {
           </div>
 
           <div className="form-group">
-            <label>Cargo/Departamento</label>
-            <select value={cargoId} onChange={(e) => setCargoId(parseInt(e.target.value))} required>
-              {cargos.map((cargo) => (
-                <option key={cargo.id} value={cargo.id}>
-                  {cargo.nombre}
-                </option>
-              ))}
-            </select>
+            <label style={{
+              fontSize: '1.05rem',
+              fontWeight: 600,
+              color: '#fff',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Users2 size={20} color="#43e97b" />
+              Asignar a Cargos
+            </label>
+            <p style={{
+              fontSize: '0.85rem',
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: '16px',
+              marginTop: '-8px'
+            }}>
+              Selecciona uno o varios cargos para este curso
+            </p>
+
+            <div className="cargo-selector-grid">
+              {cargos.map((cargo) => {
+                const isSelected = selectedCargoIds.includes(cargo.id);
+                return (
+                  <label
+                    key={cargo.id}
+                    className={`cargo-option ${isSelected ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCargoIds([...selectedCargoIds, cargo.id]);
+                        } else {
+                          setSelectedCargoIds(selectedCargoIds.filter(id => id !== cargo.id));
+                        }
+                      }}
+                      className="cargo-checkbox"
+                    />
+                    <div className="cargo-content">
+                      <div className="cargo-check-box">
+                        {isSelected ? '✓' : ''}
+                      </div>
+                      <span className="cargo-name">{cargo.nombre}</span>
+                    </div>
+                    {isSelected && <div className="cargo-glow"></div>}
+                  </label>
+                );
+              })}
+            </div>
+
+            {selectedCargoIds.length > 0 && (
+              <div className="cargo-summary">
+                <div className="cargo-summary-icon">✓</div>
+                <span>
+                  {selectedCargoIds.length} cargo{selectedCargoIds.length !== 1 ? 's' : ''} seleccionado{selectedCargoIds.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="form-group">

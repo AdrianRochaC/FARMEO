@@ -1901,7 +1901,8 @@ app.get('/api/profile/:id', verifyToken, async (req, res) => {
 // RUTA: Crear curso con evaluación (almacenamiento en Cloudinary para videos MP4)
 app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, res) => {
   try {
-    const { title, description, videoUrl, cargoId, attempts = 1, timeLimit = 30 } = req.body;
+    // CAMBIO: Ahora recibimos cargoIds (array) en lugar de cargoId (único)
+    const { title, description, videoUrl, cargoIds, attempts = 1, timeLimit = 30 } = req.body;
     let finalVideoUrl = videoUrl;
 
     // Si se subió un archivo de video MP4, subirlo a Cloudinary (igual que documentos)
@@ -1971,21 +1972,16 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
 
     const connection = await createConnection();
 
-    // Verificar que el cargo existe y obtener su nombre
-    const [cargoResult] = await connection.execute(
-      'SELECT id, nombre FROM cargos WHERE id = ?',
-      [cargoId]
-    );
+    // CAMBIO: Procesar múltiples IDs de cargos
+    const idsArr = Array.isArray(cargoIds) ? cargoIds : JSON.parse(cargoIds || '[]');
 
-    if (cargoResult.length === 0) {
+    if (idsArr.length === 0) {
       await connection.end();
       return res.status(400).json({
         success: false,
-        message: 'El cargo seleccionado no existe'
+        message: 'Debes seleccionar al menos un cargo'
       });
     }
-
-    const cargoNombre = cargoResult[0].nombre;
 
     // Verificar si el usuario es SuperAdmin
     const [userRows] = await connection.execute(
@@ -1997,12 +1993,21 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
 
     if (esSuperAdmin) {
       // SuperAdmin puede crear curso directamente
+      // CAMBIO: Ya no guardamos el nombre del cargo en 'role', dejamos NULL o 'Múltiple'
       const [result] = await connection.execute(
         `INSERT INTO courses (title, description, video_url, role, attempts, time_limit) VALUES (?, ?, ?, ?, ?, ?)`,
-        [title, description, finalVideoUrl, cargoNombre, attempts, timeLimit]
+        [title, description, finalVideoUrl, null, attempts, timeLimit]
       );
 
       const courseId = result.insertId;
+
+      // CAMBIO: Insertar relaciones en course_targets
+      for (const cId of idsArr) {
+        await connection.execute(
+          `INSERT INTO course_targets (course_id, cargo_id) VALUES (?, ?)`,
+          [courseId, cId]
+        );
+      }
 
       // Insertar preguntas si existen
       for (const q of evaluation) {
@@ -2016,11 +2021,12 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
         );
       }
 
-      // === NOTIFICAR A USUARIOS DEL CARGO ===
+      // CAMBIO: Notificar a usuarios de TODOS los cargos seleccionados
       try {
+        const placeholders = idsArr.map(() => '?').join(',');
         const [usersToNotify] = await connection.execute(
-          'SELECT id FROM usuarios WHERE cargo_id = ? AND activo = 1',
-          [cargoId]
+          `SELECT DISTINCT id FROM usuarios WHERE cargo_id IN (${placeholders}) AND activo = 1`,
+          idsArr
         );
 
         for (const user of usersToNotify) {
@@ -2039,13 +2045,12 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
         success: true,
         message: 'Curso creado exitosamente',
         courseId,
-        cargoNombre,
         cloudinaryUrl: req.file && finalVideoUrl.includes('cloudinary.com') ? finalVideoUrl : undefined,
         publicId: req.file && finalVideoUrl.includes('cloudinary.com') ? finalVideoUrl.match(/\/v\d+\/(.+?)(?:\.[^.]+)?$/)?.[1] : undefined
       });
     } else {
       // Admin debe esperar aprobación - crear solicitud
-      const descripcion = `Curso: ${title} - Para cargo: ${cargoNombre}`;
+      const descripcion = `Curso: ${title} - Para ${idsArr.length} cargo(s)`;
       const tipoContenido = 'documento'; // Los cursos se tratan como documentos para aprobación
 
       // Guardar datos del curso en JSON para cuando se apruebe
@@ -2053,8 +2058,7 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
         title,
         description,
         videoUrl: finalVideoUrl,
-        cargoId,
-        cargoNombre,
+        cargoIds: idsArr,
         attempts,
         timeLimit,
         evaluation
@@ -2120,7 +2124,7 @@ app.post('/api/courses', verifyToken, upload.single('videoFile'), async (req, re
   }
 });
 
-// RUTA: Obtener cursos (puede filtrar por rol opcionalmente)
+// RUTA: Obtener cursos (puede filtrar por cargo_id del usuario opcionalmente)
 app.get('/api/courses', verifyToken, async (req, res) => {
   try {
     const { rol } = req.query;
@@ -2130,9 +2134,40 @@ app.get('/api/courses', verifyToken, async (req, res) => {
 
     const connection = await createConnection();
 
-    const [courses] = rol
-      ? await connection.execute(`SELECT * FROM courses WHERE role = ?`, [rol])
-      : await connection.execute(`SELECT * FROM courses`);
+    // CAMBIO: Ahora usamos la tabla course_targets para filtrar
+    let courses;
+    if (rol) {
+      // Si se pasa un rol, buscar el cargo_id correspondiente y filtrar
+      const [cargoInfo] = await connection.execute(
+        'SELECT id FROM cargos WHERE nombre = ?',
+        [rol]
+      );
+
+      if (cargoInfo.length > 0) {
+        const cargoId = cargoInfo[0].id;
+        [courses] = await connection.execute(`
+          SELECT DISTINCT c.*, GROUP_CONCAT(DISTINCT cg.nombre SEPARATOR ', ') as cargos_nombres
+          FROM courses c
+          INNER JOIN course_targets ct ON c.id = ct.course_id
+          INNER JOIN cargos cg ON ct.cargo_id = cg.id
+          WHERE ct.cargo_id = ?
+          GROUP BY c.id
+          ORDER BY c.created_at DESC
+        `, [cargoId]);
+      } else {
+        courses = [];
+      }
+    } else {
+      // Sin filtro: traer todos los cursos con sus cargos
+      [courses] = await connection.execute(`
+        SELECT c.*, GROUP_CONCAT(DISTINCT cg.nombre SEPARATOR ', ') as cargos_nombres
+        FROM courses c
+        LEFT JOIN course_targets ct ON c.id = ct.course_id
+        LEFT JOIN cargos cg ON ct.cargo_id = cg.id
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
+      `);
+    }
 
     console.log('Cursos encontrados en DB:', courses.length);
 
@@ -2155,7 +2190,8 @@ app.get('/api/courses', verifyToken, async (req, res) => {
         title: course.title,
         description: course.description,
         videoUrl: course.video_url,
-        role: course.role,
+        role: course.cargos_nombres || 'Sin asignar', // CAMBIO: Ahora mostramos los cargos concatenados
+        cargos_nombres: course.cargos_nombres, // Campo adicional para el frontend
         attempts: course.attempts,
         timeLimit: course.time_limit,
         evaluation
@@ -2194,6 +2230,30 @@ app.get('/api/courses/:id/questions', verifyToken, async (req, res) => {
     }));
 
     res.json({ success: true, questions: formatted });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
+
+// RUTA: Obtener cargos asignados a un curso (para edición)
+app.get('/api/courses/:id/cargos', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connection = await createConnection();
+
+    const [cargosData] = await connection.execute(
+      `SELECT cargo_id FROM course_targets WHERE course_id = ?`,
+      [id]
+    );
+
+    await connection.end();
+
+    const cargoIds = cargosData.map(row => row.cargo_id);
+
+    res.json({
+      success: true,
+      cargoIds
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
@@ -2245,11 +2305,12 @@ app.delete('/api/courses/:id', verifyToken, async (req, res) => {
   }
 });
 
-// RUTA: Editar curso existente (ACTUALIZADA)
+// RUTA: Editar curso existente (ACTUALIZADA para múltiples cargos)
 app.put('/api/courses/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, videoUrl, cargoId, evaluation = [], attempts, timeLimit } = req.body;
+    // CAMBIO: Ahora recibimos cargoIds (array) en lugar de cargoId
+    const { title, description, videoUrl, cargoIds, evaluation = [], attempts, timeLimit } = req.body;
 
 
     const connection = await createConnection();
@@ -2271,48 +2332,43 @@ app.put('/api/courses/:id', verifyToken, async (req, res) => {
     const finalTitle = title || current.title;
     const finalDescription = description || current.description;
     const finalVideoUrl = videoUrl && videoUrl.trim() !== '' ? videoUrl : current.video_url;
-
-    // Para cargoId, necesitamos obtener el ID numérico del cargo existente
-    let finalCargoId;
-    if (cargoId) {
-      finalCargoId = parseInt(cargoId);
-    } else {
-      // Si no se proporciona cargoId, buscar el ID del cargo actual por nombre
-      const [currentCargo] = await connection.execute(
-        'SELECT id FROM cargos WHERE nombre = ?',
-        [current.role]
-      );
-      finalCargoId = currentCargo.length > 0 ? currentCargo[0].id : null;
-    }
-
     const finalAttempts = attempts || current.attempts;
     const finalTimeLimit = timeLimit || current.time_limit;
 
-    // Verificar que el cargo existe y obtener su nombre
-    const [cargoResult] = await connection.execute(
-      'SELECT id, nombre FROM cargos WHERE id = ?',
-      [finalCargoId]
-    );
+    // CAMBIO: Procesar múltiples IDs de cargos
+    let idsArr = [];
+    if (cargoIds) {
+      idsArr = Array.isArray(cargoIds) ? cargoIds : JSON.parse(cargoIds || '[]');
+    }
 
-    if (cargoResult.length === 0) {
+    if (idsArr.length === 0) {
       await connection.end();
       return res.status(400).json({
         success: false,
-        message: 'El cargo seleccionado no existe'
+        message: 'Debes seleccionar al menos un cargo'
       });
     }
 
-    const cargoNombre = cargoResult[0].nombre;
-
-    // Actualizar curso
+    // Actualizar curso (role lo dejamos en NULL ya que usamos course_targets)
     const [updateResult] = await connection.execute(
       `UPDATE courses SET title = ?, description = ?, video_url = ?, role = ?, attempts = ?, time_limit = ? WHERE id = ?`,
-      [finalTitle, finalDescription, finalVideoUrl, cargoNombre, finalAttempts, finalTimeLimit, id]
+      [finalTitle, finalDescription, finalVideoUrl, null, finalAttempts, finalTimeLimit, id]
     );
 
     if (updateResult.affectedRows === 0) {
       await connection.end();
       return res.status(404).json({ success: false, message: 'Curso no encontrado para actualizar' });
+    }
+
+    // CAMBIO: Eliminar relaciones antiguas de course_targets
+    await connection.execute(`DELETE FROM course_targets WHERE course_id = ?`, [id]);
+
+    // CAMBIO: Insertar nuevas relaciones
+    for (const cId of idsArr) {
+      await connection.execute(
+        `INSERT INTO course_targets (course_id, cargo_id) VALUES (?, ?)`,
+        [id, cId]
+      );
     }
 
     // Eliminar preguntas anteriores
@@ -4513,12 +4569,44 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
         if (datosMatch) {
           const cursoData = JSON.parse(datosMatch[1]);
 
-          // Insertar curso
+          // CAMBIO: Insertar curso sin rol específico (usamos course_targets)
           const [result] = await connection.execute(
             `INSERT INTO courses (title, description, video_url, role, attempts, time_limit) VALUES (?, ?, ?, ?, ?, ?)`,
-            [cursoData.title, cursoData.description, cursoData.videoUrl, cursoData.cargoNombre, cursoData.attempts, cursoData.timeLimit]
+            [
+              cursoData.title,
+              cursoData.description,
+              cursoData.videoUrl,
+              null, // Ya no usamos el campo role
+              cursoData.attempts || 1,
+              cursoData.timeLimit || 30
+            ]
           );
           const courseId = result.insertId;
+          console.log('✅ Curso insertado con ID:', courseId);
+
+          // CAMBIO: Insertar relaciones en course_targets para múltiples cargos
+          if (cursoData.cargoIds && Array.isArray(cursoData.cargoIds)) {
+            for (const cargoId of cursoData.cargoIds) {
+              await connection.execute(
+                `INSERT INTO course_targets (course_id, cargo_id) VALUES (?, ?)`,
+                [courseId, cargoId]
+              );
+            }
+
+            // Notificar a usuarios de TODOS los cargos
+            const placeholders = cursoData.cargoIds.map(() => '?').join(',');
+            const [usersToNotify] = await connection.execute(
+              `SELECT DISTINCT id FROM usuarios WHERE cargo_id IN (${placeholders}) AND activo = 1`,
+              cursoData.cargoIds
+            );
+
+            for (const user of usersToNotify) {
+              await connection.execute(
+                'INSERT INTO notifications (user_id, message, type, data) VALUES (?, ?, ?, ?)',
+                [user.id, `Se ha creado un nuevo curso: ${cursoData.title}`, 'curso_nuevo', JSON.stringify({ courseId })]
+              );
+            }
+          }
 
           // Insertar preguntas si existen
           if (cursoData.evaluation && Array.isArray(cursoData.evaluation)) {
@@ -4533,22 +4621,10 @@ app.post('/api/aprobaciones/:id/aprobar', verifyToken, verifySuperAdmin, async (
               );
             }
           }
-
-          // Notificar a usuarios del cargo
-          const [usersToNotify] = await connection.execute(
-            'SELECT id FROM usuarios WHERE cargo_id = ? AND activo = 1',
-            [cursoData.cargoId]
-          );
-
-          for (const user of usersToNotify) {
-            await connection.execute(
-              'INSERT INTO notifications (user_id, message, type, data) VALUES (?, ?, ?, ?)',
-              [user.id, `Se ha creado un nuevo curso: ${cursoData.title}`, 'curso_nuevo', JSON.stringify({ courseId })]
-            );
-          }
         }
       } catch (error) {
-        console.error('Error procesando curso aprobado:', error);
+        console.error('❌ Error procesando curso aprobado:', error);
+        console.error('Stack:', error.stack);
       }
     } else if (descripcion.includes('documento') || descripcion.includes('Documento:')) {
       // Procesar documento cuando se aprueba
